@@ -314,9 +314,9 @@ def join_meta_data(main_df, path, sales=True, meta=True):
 
 
 def export_pandas(main_df, path,
-    name='Price-Comparison',
-    to_csv=True, to_excel=True,
-    index=False, timetag=None):
+                    name='Price-Comparison',
+                    to_csv=True, to_excel=True,
+                    index=False, timetag=None):
 
     if timetag:
         filename = os.path.join(path, timetag+'_'+name)
