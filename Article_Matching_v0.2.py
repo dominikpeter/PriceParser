@@ -18,12 +18,14 @@ import turbodbc
 def load_json(path):
     with open(path) as j:
         data = json.load(j)
+        
     return data
 
 
 def load_sql_text(path):
     with codecs.open(path, encoding='utf-8') as sql:
         file = sql.read()
+
     return file
 
 
@@ -36,6 +38,7 @@ def add_columns(df, key):
     cols = [colname_preis,
             colname_text,
             colname_join]
+
     def check_columns(x):
         if x not in df.columns:
             df[x] = np.nan
@@ -62,6 +65,7 @@ def sql_to_pandas(connection, query, *args, **kwargs):
 
 def csv_to_pandas(csv_filepath, *args, **kwargs):
     df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
+
     return df
 
 
@@ -120,8 +124,8 @@ def clean_text(df, pattern='\t|\n|\r'):
 def batch(iterable, n=1):
     from scipy import sparse
     if sparse.issparse(iterable) or isinstance(
-                                            iterable,
-                                            (np.ndarray, np.generic)):
+            iterable,
+            (np.ndarray, np.generic)):
         row_l = iterable.shape[0]
         for ndx in range(0, row_l, n):
             yield iterable[ndx:min(ndx + n, row_l), ]
@@ -132,6 +136,7 @@ def check_input_string_boolean(x):
         return True
     if x.lower() in ('no', 'nein', 'n', 'false'):
         return False
+
     return False
 
 
@@ -141,6 +146,7 @@ def check_settings(json, key, on):
         c = json[key][on]
     except KeyError:
         print('Key not found \n')
+
     return c
 
 
@@ -192,10 +198,11 @@ def replace_column_after_join(df, colname_preis, colname_text, key, on):
     df[colname_text] = np.where(
         pd.isnull(df[colname_text]), df['Art_Txt_Lang_y'], df[colname_text])
     df['Joined_{}_on'.format(key)] = np.where(
-        (pd.isnull(df['Joined_{}_on'.format(key)])) & (pd.notnull(df['Preis_y'])),
+        (pd.isnull(df['Joined_{}_on'.format(key)])) & (
+            pd.notnull(df['Preis_y'])),
         df['Joined_on_y'], df['Joined_{}_on'.format(key)])
     df = df[[i for i in df.columns if not re.match(
-                                            '.+(_y|Level_5|Level_6)', i)]]
+        '.+(_y|Level_5|Level_6)', i)]]
 
     return df
 
@@ -263,7 +270,7 @@ def join_on_string_distance(
             df_r_, how='left', left_on='Closest_{}'.format(key),
             right_index=True, suffixes=('', '_y'))
 
-        df_l = df_l.join(distance_df,how='left', lsuffix='', rsuffix='_y')
+        df_l = df_l.join(distance_df, how='left', lsuffix='', rsuffix='_y')
 
         df_l = replace_column_after_join(
             df_l, colname_preis, colname_text, key, on='Text Similarity')
@@ -274,8 +281,8 @@ def join_on_string_distance(
 
 
 def prepare_data(join_df_path, key, main_df,
-                settings, threshold, distance,
-                n_jobs=0, chunksize=2000):
+                 settings, threshold, distance,
+                 n_jobs=0, chunksize=2000):
     join_df = csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
@@ -289,9 +296,11 @@ def prepare_data(join_df_path, key, main_df,
         main_df, join_df, key, settings['Companies'],
         threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
 
-    preis_col = [i for i in main_df.loc[:,'Preis':].columns if re.match('Preis.*', i)]
+    preis_col = [i for i in main_df.loc[:,
+                                        'Preis':].columns if re.match('Preis.*', i)]
 
-    main_df[preis_col] = main_df[preis_col].apply(lambda x: check_distance(x, threshold), axis=1)
+    main_df[preis_col] = main_df[preis_col].apply(
+        lambda x: check_distance(x, threshold), axis=1)
 
     return main_df
 
@@ -302,24 +311,26 @@ def join_meta_data(main_df, path, sales=True, meta=True):
         print('Getting Sales Data from Database...')
         sales_query = load_sql_text(os.path.join(path, 'Sales.sql'))
         sales = sql_to_pandas(con, sales_query)
-        main_df = main_df.merge(sales, how='left', on='SGVSB',  suffixes=('', '_y'))
+        main_df = main_df.merge(
+            sales, how='left', on='SGVSB',  suffixes=('', '_y'))
 
     if meta:
         print('Getting Meta Data from Database...')
         meta_query = load_sql_text(os.path.join(path, 'Meta.sql'))
         meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
-        main_df = main_df.merge(meta, how='left', on='SGVSB',  suffixes=('', '_y'))
+        main_df = main_df.merge(
+            meta, how='left', on='SGVSB',  suffixes=('', '_y'))
 
     return main_df
 
 
 def export_pandas(main_df, path,
-                    name='Price-Comparison',
-                    to_csv=True, to_excel=True,
-                    index=False, timetag=None):
+                  name='Price-Comparison',
+                  to_csv=True, to_excel=True,
+                  index=False, timetag=None):
 
     if timetag:
-        filename = os.path.join(path, timetag+'_'+name)
+        filename = os.path.join(path, timetag + '_' + name)
     else:
         filename = os.path.join(path, name)
     try:
@@ -380,10 +391,10 @@ def main():
     for i in files_to_match:
         print('\nMatching Data from {}\n{}\n'.format(i, '#' * 80))
         main_df = prepare_data(
-                            files_to_match[i], i, main_df,
-                            settings, threshold=price_threshold,
-                            distance=text_distance, n_jobs=parallel,
-                            chunksize=chunksize)
+            files_to_match[i], i, main_df,
+            settings, threshold=price_threshold,
+            distance=text_distance, n_jobs=parallel,
+            chunksize=chunksize)
     try:
         main_df = join_meta_data(
             main_df, path=currentpath, sales=True, meta=True)
@@ -398,6 +409,6 @@ def main():
 if __name__ == "__main__":
 
     print("{}{}{}Article Matching for Price_Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(
-                "\n"*2, "#"*80, "\n"*2, "\n"*2, "#"*80, "\n"*2))
+        "\n" * 2, "#" * 80, "\n" * 2, "\n" * 2, "#" * 80, "\n" * 2))
 
     main()
