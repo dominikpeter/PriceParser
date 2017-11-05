@@ -18,14 +18,12 @@ import turbodbc
 def load_json(path):
     with open(path) as j:
         data = json.load(j)
-
     return data
 
 
 def load_sql_text(path):
     with codecs.open(path, encoding='utf-8') as sql:
         file = sql.read()
-
     return file
 
 
@@ -44,7 +42,6 @@ def add_columns(df, key):
             df[x] = np.nan
     for i in cols:
         check_columns(i)
-
     return df
 
 
@@ -53,19 +50,16 @@ def create_connection_string_turbo(server, database):
     constr = 'Driver={ODBC Driver 13 for SQL Server};Server=' + \
         server + ';Database=' + database + ';Trusted_Connection=yes;'
     con = turbodbc.connect(connection_string=constr, turbodbc_options=options)
-
     return con
 
 
 def sql_to_pandas(connection, query, *args, **kwargs):
     df = pd.read_sql(query, connection, *args, **kwargs)
-
     return df
 
 
 def csv_to_pandas(csv_filepath, *args, **kwargs):
     df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
-
     return df
 
 
@@ -83,7 +77,6 @@ def check_distance(x, threshold=0.5):
             r = np.nan
         list_to_return.append(r)
         i += 1
-
     return list_to_return
 
 
