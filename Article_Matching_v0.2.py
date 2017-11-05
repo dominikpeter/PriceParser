@@ -18,7 +18,7 @@ import turbodbc
 def load_json(path):
     with open(path) as j:
         data = json.load(j)
-        
+
     return data
 
 
@@ -191,7 +191,9 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
     return df_l
 
 
-def replace_column_after_join(df, colname_preis, colname_text, key, on):
+def replace_column_after_join(df, colname_preis,
+    colname_text, key, on
+    ):
     df['Joined_on_y'] = on
     df[colname_preis] = np.where(
         pd.isnull(df[colname_preis]), df['Preis_y'], df[colname_preis])
@@ -211,8 +213,8 @@ def join_on_string_distance(
         df_l, df_r,
         key, settings, chunksize=5000,
         threshold=0.5, n_jobs=1, method='cosine',
-        columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
-
+        columns=['Art_Txt_Lang', 'Art_Txt_Kurz']
+        ):
     df_r_ = df_r.copy()
     on = 'Text Similarity'
     if check_settings(settings, key, on):
@@ -280,9 +282,11 @@ def join_on_string_distance(
     return df_l
 
 
-def prepare_data(join_df_path, key, main_df,
-                 settings, threshold, distance,
-                 n_jobs=0, chunksize=2000):
+def prepare_data(join_df_path,
+    key, main_df,
+    settings, threshold, distance,
+    n_jobs=0, chunksize=2000
+    ):
     join_df = csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
@@ -325,10 +329,10 @@ def join_meta_data(main_df, path, sales=True, meta=True):
 
 
 def export_pandas(main_df, path,
-                  name='Price-Comparison',
-                  to_csv=True, to_excel=True,
-                  index=False, timetag=None):
-
+    name='Price-Comparison',
+    to_csv=True, to_excel=True,
+    index=False, timetag=None
+    ):
     if timetag:
         filename = os.path.join(path, timetag + '_' + name)
     else:
