@@ -378,12 +378,12 @@ def main():
     main_df = csv_to_pandas(main_file[0])
 
     for i in files_to_match:
-        print('\nMatching Data from {}\n{}\n'.format(i, '#'*80))
+        print('\nMatching Data from {}\n{}\n'.format(i, '#' * 80))
         main_df = prepare_data(
-                        files_to_match[i], i, main_df,
-                        settings, threshold=price_threshold,
-                        distance=text_distance, n_jobs=parallel,
-                        chunksize=chunksize)
+                            files_to_match[i], i, main_df,
+                            settings, threshold=price_threshold,
+                            distance=text_distance, n_jobs=parallel,
+                            chunksize=chunksize)
     try:
         main_df = join_meta_data(
             main_df, path=currentpath, sales=True, meta=True)
