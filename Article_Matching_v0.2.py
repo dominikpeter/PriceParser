@@ -102,14 +102,18 @@ def modify_dataframe(df):
         lambda x: ''.join(x), axis=1)
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
-    df.loc[check_id, 'idHersteller'] = df.loc[check_id, ['FarbId',
-                                                         'AusführungsId',
-                                                         'Art_Nr_Hersteller',
-                                                         'Art_Nr_Hersteller_Firma']].apply(lambda x: ''.join(x), axis=1)
+
+    cols_ = ['FarbId',
+             'AusführungsId',
+             'Art_Nr_Hersteller',
+             'Art_Nr_Hersteller_Firma'
+             ]
+    df.loc[check_id,
+           'idHersteller'] = df.loc[check_id,
+                                    cols_].apply(lambda x: ''.join(x), axis=1)
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
-
     return clean_text(df)
 
 
@@ -117,7 +121,6 @@ def clean_text(df, pattern='\t|\n|\r'):
     for i in df.columns:
         if df[i].dtype == 'object':
             df[i] = df[i].str.replace(pattern, ' ')
-
     return df
 
 
@@ -136,7 +139,6 @@ def check_input_string_boolean(x):
         return True
     if x.lower() in ('no', 'nein', 'n', 'false'):
         return False
-
     return False
 
 
@@ -146,7 +148,6 @@ def check_settings(json, key, on):
         c = json[key][on]
     except KeyError:
         print('Key not found \n')
-
     return c
 
 
@@ -187,13 +188,11 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
             df_l, colname_preis, colname_text, key, on)
     else:
         print("Won't join {} on {} due to settings".format(key, on))
-
     return df_l
 
 
 def replace_column_after_join(df, colname_preis,
-    colname_text, key, on
-    ):
+                              colname_text, key, on):
     df['Joined_on_y'] = on
     df[colname_preis] = np.where(
         pd.isnull(df[colname_preis]), df['Preis_y'], df[colname_preis])
@@ -205,16 +204,13 @@ def replace_column_after_join(df, colname_preis,
         df['Joined_on_y'], df['Joined_{}_on'.format(key)])
     df = df[[i for i in df.columns if not re.match(
         '.+(_y|Level_5|Level_6)', i)]]
-
     return df
 
 
-def join_on_string_distance(
-        df_l, df_r,
-        key, settings, chunksize=5000,
-        threshold=0.5, n_jobs=1, method='cosine',
-        columns=['Art_Txt_Lang', 'Art_Txt_Kurz']
-        ):
+def join_on_string_distance(df_l, df_r, key,
+                            settings, chunksize=5000,
+                            threshold=0.5, n_jobs=1, method='cosine',
+                            columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
     df_r_ = df_r.copy()
     on = 'Text Similarity'
     if check_settings(settings, key, on):
@@ -278,15 +274,13 @@ def join_on_string_distance(
             df_l, colname_preis, colname_text, key, on='Text Similarity')
     else:
         print("Won't join {} on {} due to settings\n".format(key, on))
-
     return df_l
 
 
 def prepare_data(join_df_path,
-    key, main_df,
-    settings, threshold, distance,
-    n_jobs=0, chunksize=2000
-    ):
+                 key, main_df,
+                 settings, threshold, distance,
+                 n_jobs=0, chunksize=2000):
     join_df = csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
@@ -305,7 +299,6 @@ def prepare_data(join_df_path,
 
     main_df[preis_col] = main_df[preis_col].apply(
         lambda x: check_distance(x, threshold), axis=1)
-
     return main_df
 
 
@@ -324,15 +317,13 @@ def join_meta_data(main_df, path, sales=True, meta=True):
         meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(
             meta, how='left', on='SGVSB',  suffixes=('', '_y'))
-
     return main_df
 
 
 def export_pandas(main_df, path,
-    name='Price-Comparison',
-    to_csv=True, to_excel=True,
-    index=False, timetag=None
-    ):
+                  name='Price-Comparison',
+                  to_csv=True, to_excel=True,
+                  index=False, timetag=None):
     if timetag:
         filename = os.path.join(path, timetag + '_' + name)
     else:
