@@ -263,8 +263,8 @@ def join_on_string_distance(df_l, df_r, key,
         distance_df[[cols_dist]] = distance_df[[cols_dist]].astype(float)
 
         begin_x = len(distance_df)
-        index_to_drop = distance_df[distance_df[colname_distance].astype(
-            float) > threshold].index
+        index_to_drop = distance_df[distance_df[
+                                        colname_distance] > threshold].index
         distance_df.drop(index_to_drop, inplace=True)
         deleted_x = begin_x - len(distance_df)
 
@@ -278,9 +278,6 @@ def join_on_string_distance(df_l, df_r, key,
                                         suffixes=('', '_y'))
 
         df_l = df_l.join(distance_df, how='left', lsuffix='', rsuffix='_y')
-
-        print(df_l.columns)
-        print(np.nanmax(df_l[colname_distance]))
 
         df_l = replace_column_after_join(
             df_l, colname_preis, colname_text, key, on='Text Similarity')
