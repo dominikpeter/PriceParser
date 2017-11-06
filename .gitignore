@@ -1,6 +1,4 @@
 
-2017-11-03_Price-Comparison\.csv
-
 Excel/
 
 Output/
@@ -13,16 +11,4 @@ Article_Matching_v0\.1\.py
 
 *.csv
 
-Price-Comparison\.xlsx
-
-Price-Comparison\.csv
-
-Price-Analysis_Backup\.csv
-
-Price-Analysis\.csv
-
-Price-Analysis\.xlsx
-
-Price-Analysis2\.csv
-
-Price-Comparison-Table\.xlsx
+*.xlsx
