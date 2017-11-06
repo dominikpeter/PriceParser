@@ -254,12 +254,13 @@ def join_on_string_distance(df_l, df_r, key,
         colname_distance = 'Distance_{}'.format(key)
         colname_closest = 'Closest_{}'.format(key)
 
+        cols_dist = [colname_distance,
+                     colname_closest]
+
         distance_df = pd.DataFrame(arr,
-                                   columns=[colname_distance,
-                                            colname_closest],
+                                   columns=cols_dist,
                                    dtype=float, index=ix)
 
-        cols_dist
         distance_df[[cols_dist]] = distance_df[[cols_dist]].astype(float)
 
         begin_x = len(distance_df)
