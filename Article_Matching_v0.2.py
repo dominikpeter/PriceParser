@@ -127,6 +127,13 @@ def clean_text(df, pattern='\t|\n|\r'):
     return df
 
 
+def clean_join(x):
+    if pd.isnull(x[0]):
+        x = [np.nan for i in x]
+
+    return x
+
+
 def batch(iterable, n=1):
     from scipy import sparse
     if sparse.issparse(iterable) or isinstance(
@@ -176,19 +183,23 @@ def replace_column_after_join(df, colname_preis,
         df['Joined_on_y'], df['Joined_{}_on'.format(key)])
 
     df = df[[i for i in df.columns if not re.match(
-        '.+(_y|Level_5|Level_6|Closest)', i)]]
+        '.+(_y|Level_5|Level_6|Closest.*)', i)]]
 
     return df
 
 
 def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
+
     df_r_ = df_r.copy()
+
     if check_settings(settings, key, on):
         print('Joining Data on {} \n'.format(on))
+
         try:
             lon, ron = on
         except ValueError:
             lon, ron = on, on
+
         colname_preis = 'Preis_{}'.format(key)
         colname_text = 'Txt_Lang_{}'.format(key)
 
@@ -308,6 +319,7 @@ def prepare_data(join_df_path,
                  key, main_df,
                  settings, threshold, distance,
                  n_jobs=0, chunksize=2000):
+
     join_df = csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
@@ -326,6 +338,11 @@ def prepare_data(join_df_path,
 
     main_df[preis_col] = main_df[preis_col].apply(
         lambda x: check_distance(x, threshold), axis=1)
+
+    to_clean = [i for i in main_df if re.match('Preis_{}'.format(key), i)]
+    [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
+    print(to_clean)
+    main_df[to_clean] = main_df[to_clean].apply(lambda x: clean_join(x), axis=1)
 
     return main_df
 
