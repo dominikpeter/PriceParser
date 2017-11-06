@@ -332,9 +332,7 @@ def prepare_data(join_df_path,
         main_df, join_df, key, settings['Companies'],
         threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
 
-    preis_col = [i for i in main_df.loc[:,
-                                        'Preis':].columns if re.match('Preis.*',
-                                                                      i)]
+    preis_col = [i for i in main_df.loc[:,'Preis':].columns if re.match('Preis.*',i)]
 
     main_df[preis_col] = main_df[preis_col].apply(
         lambda x: check_distance(x, threshold), axis=1)
@@ -342,7 +340,8 @@ def prepare_data(join_df_path,
     to_clean = [i for i in main_df if re.match('Preis_{}'.format(key), i)]
     [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
     print(to_clean)
-    main_df[to_clean] = main_df[to_clean].apply(lambda x: clean_join(x), axis=1)
+    main_df[to_clean] = main_df[to_clean
+                                ].apply(lambda x: clean_join(x), axis=1)
 
     return main_df
 
