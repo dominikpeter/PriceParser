@@ -183,7 +183,7 @@ def replace_column_after_join(df, colname_preis,
         df['Joined_on_y'], df['Joined_{}_on'.format(key)])
 
     df = df[[i for i in df.columns if not re.match(
-        '.+(_y|Level_5|Level_6|Closest.*)', i)]]
+        '.*(_y|Level_5|Level_6|Closest).*', i)]]
 
     return df
 
