@@ -17,16 +17,6 @@ df <- df_raw %>%
   select(-Preis_EAN)
 
 
-
-ddd <- reshape2::melt(df, id.vars=1:8, variable.name='Company', value.name="Preis") %>% 
-  as_data_frame() %>%
-  mutate(Company = stringr::str_sub(Company, 7, -1),
-         Preis_Check = ifelse(Preis_Pos==Preis,"Preis gleich",ifelse(Preis_Pos>Preis,"Preis höher", "Preis tiefer")),
-         Preis_Check = Preis_Check %>% as.factor) %>% 
-  filter(!is.na(Preis_Check))
-
-
-
 df_boxplot <- df_raw %>% 
   select(ArtikelId,Category_Level_1, Category_Level_2, Farbe, ObjectRate,
          Lieferantenname, Artikelserie,Sales_LTM,
@@ -42,6 +32,7 @@ df_boxplot <- df_raw %>%
 median <- df_boxplot %>%
   filter(Preis<1000) %>% 
   filter(Sales_LTM>0) %>% 
+  filter(Company == 'CRH') %>% 
   filter(Category_Level_1 != "Ersatzteile") %>% 
   tidyr::drop_na() %>% 
   group_by(Category_Level_1) %>% 
@@ -49,16 +40,39 @@ median <- df_boxplot %>%
 
 
 
+df_boxplot_reshape <- df_boxplot %>% 
+  select(-Color) %>% 
+  reshape2::dcast(ArtikelId ~ Company, value.var="Preis", fun.aggregate = max) %>% 
+  mutate(Sanitas = ifelse(CRH > Sanitas, TRUE, FALSE),
+         Hug = ifelse(CRH > Hug, TRUE, FALSE),
+         Saneo = ifelse(CRH > Hug, TRUE, FALSE),
+         SaniDusch = ifelse(CRH > Sanitas, TRUE, FALSE),
+         Sabag = ifelse(CRH > Sanitas, TRUE, FALSE),
+         CRH = NaN) %>% 
+  reshape2::melt(id.vars=1, variable.name = "Company", value.name="PriceCheck")
+
+
+
+
+df_boxplot <- df_boxplot %>% 
+  left_join(df_boxplot_reshape, by=c('ArtikelId', 'Company'))
+
+
+
+
+
 df_boxplot %>% 
   filter(Preis<1000) %>% 
   filter(Sales_LTM>0) %>% 
   filter(Category_Level_1 != "Ersatzteile") %>% 
-  tidyr::drop_na() %>% 
+  #tidyr::drop_na() %>% 
   ggplot(aes(x=Company, y=Preis, fill=Color)) +
   geom_boxplot(color="black", notch = TRUE) +
-  geom_hline(data = median, aes(yintercept = Median), size=0.8, alpha=0.6) + 
+  geom_jitter(aes(color=PriceCheck), alpha=0.5) +
+  geom_hline(data = median, aes(yintercept = Median),
+             size=0.6, alpha=0.95, linetype = 1, color='#34495e') + 
   facet_wrap(~Category_Level_1, scales = "free") +
-  scale_fill_manual(values=c("#95A5A6","#1abc9c")) +
+  scale_fill_manual(values=c("#95A5A6","#1abc9c"), labels = c("", "")) +
   theme_minimal() +
   theme(axis.line = element_line(colour = "black"),
         plot.title = element_text(size=22),
@@ -68,9 +82,8 @@ df_boxplot %>%
         panel.background = element_rect('#F0F1F5'),
         panel.grid = element_blank(),
         legend.position = "bottom",
-        axis.title.y.right = element_blank())
-
-
+        axis.title.y.right = element_blank()) +
+  labs(fill="")
 
 
 
