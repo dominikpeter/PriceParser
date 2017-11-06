@@ -7,7 +7,7 @@ library(readr)
 library(reshape2)
 
 
-df_raw <- readr::read_delim("c:/users/peterd/Desktop/IGH/2017-11-03_Price-Comparison.csv", delim=';')
+df_raw <- readr::read_delim("c:/users/peterd/Desktop/GitHub/PriceParser/2017-11-06_Price-Comparison.csv", delim=';')
 
 
 df <- df_raw %>% 
@@ -15,60 +15,6 @@ df <- df_raw %>%
          Lieferantenname, Artikelserie,Sales_LTM,
          grep("Preis.+", names(df_raw))) %>% 
   select(-Preis_EAN)
-
-
-
-dd <- reshape2::melt(df, id.vars=1:9, variable.name='Company', value.name="Preis") %>% 
-  as_data_frame() %>%
-  mutate(Company = stringr::str_sub(Company, 7, -1),
-         Preis_Check = ifelse(Preis_Pos==Preis,"Preis gleich",ifelse(Preis_Pos>Preis,"Preis höher", "Preis tiefer")),
-         Preis_Check = Preis_Check %>% as.factor) %>% 
-  filter(!is.na(Preis_Check))
-
-
-
-dd %>% 
-  filter(Company %in% c("Sabag")) %>% 
-  # filter(Preis < 7000) %>% 
-  # filter(Preis_Pos < 7000) %>% 
-  ggplot(aes(x=Preis_Pos, y=Preis, size=Sales_LTM, color=Preis_Check)) +
-  geom_point(alpha=0.7) +
-  scale_x_log10()+
-  scale_y_log10()+SSSS
-  facet_wrap(~Category_Level_1, ncol=2)+
-  scale_color_manual(values=c("#34495e","#1abc9c", "#e74c3c")) +
-  theme_minimal() +
-  theme(axis.line = element_line(colour = "black"),
-        plot.title = element_text(size=22),
-        strip.text.x = element_text(size = 10, face="bold"),
-        legend.title = element_blank(),
-        panel.border = element_blank(),
-        panel.background = element_rect('#F0F1F5'),
-        panel.grid = element_blank(),
-        legend.position = "bottom",
-        axis.title.y.right = element_blank())
-
-dd %>% 
-  filter(Company %in% c("Sanitas")) %>% 
-  # filter(Preis < 7000) %>% 
-  # filter(Preis_Pos < 7000) %>% 
-  ggplot(aes(x=Preis_Pos, y=Preis, size=Sales_LTM, color=Preis_Check)) +
-  geom_point(alpha=0.7) +
-  scale_x_log10()+
-  scale_y_log10()+
-  facet_wrap(~Category_Level_1, ncol=2)+
-  scale_color_manual(values=c("#34495e","#1abc9c", "#e74c3c")) +
-  theme_minimal() +
-  theme(axis.line = element_line(colour = "black"),
-        plot.title = element_text(size=22),
-        strip.text.x = element_text(size = 10, face="bold"),
-        legend.title = element_blank(),
-        panel.border = element_blank(),
-        panel.background = element_rect('#F0F1F5'),
-        panel.grid = element_blank(),
-        legend.position = "bottom",
-        axis.title.y.right = element_blank())
-
 
 
 
@@ -93,6 +39,13 @@ df_boxplot <- df_raw %>%
   mutate(Color = ifelse(Company=="CRH", TRUE, FALSE))
 
 
+median <- df_boxplot %>%
+  filter(Preis<1000) %>% 
+  filter(Sales_LTM>0) %>% 
+  filter(Category_Level_1 != "Ersatzteile") %>% 
+  tidyr::drop_na() %>% 
+  group_by(Category_Level_1) %>% 
+  summarise(Median = median(Preis))
 
 
 
@@ -103,7 +56,8 @@ df_boxplot %>%
   tidyr::drop_na() %>% 
   ggplot(aes(x=Company, y=Preis, fill=Color)) +
   geom_boxplot(color="black", notch = TRUE) +
-  facet_wrap(~Category_Level_1) +
+  geom_hline(data = median, aes(yintercept = Median), size=0.8, alpha=0.6) + 
+  facet_wrap(~Category_Level_1, scales = "free") +
   scale_fill_manual(values=c("#95A5A6","#1abc9c")) +
   theme_minimal() +
   theme(axis.line = element_line(colour = "black"),
