@@ -1,12 +1,12 @@
-{
+"Sanitär": {
   "Main File": "Richner",
   "Main File from Database": false,
-  "Max Text Distance": 0.2,
-  "Max Price Difference": 0.2,
+  "Max Text Distance": 0.4,
+  "Max Price Difference": 0.5,
   "Chunksize": 1500,
   "Parallel Jobs": 0,
-  "Export":{
-    "CSV":true,
+  "Export": {
+    "CSV": true,
     "Excel": false,
     "Timetag": true,
     "Name": "Price-Comparison"

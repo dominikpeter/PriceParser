@@ -1,3 +1,4 @@
+import argparse
 import codecs
 import csv
 import glob
@@ -338,13 +339,11 @@ def export_pandas(main_df, path,
         print('Permission was denied when writing to Excel\n')
 
 
-def main():
+def main(settings):
     currentpath = os.getcwd()
 
     files = [i for i in glob.iglob(os.path.join(
         currentpath) + '/Output/*.csv', recursive=True)]
-
-    settings = load_json(os.path.join(currentpath, 'settings.json'))
 
     # get settings parameters
     main_file_pattern = settings['Main File']
@@ -395,6 +394,18 @@ def main():
 
 # -------------------------------------------------------------------------------------
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Example with long option names')
+    parser.add_argument('--settings', default="Sanitär", dest="settings",
+                        help="Name of Setting", type=str)
+
+
+    args = parser.parse_args()
+    setting_to_apply = args.settings
+
+    settings = load_json(os.path.join(currentpath, 'settings.json'))
+    settings = settings[setting_to_apply]
 
     print("{}{}{}Article Matching for Price_Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(
         "\n" * 2, "#" * 80, "\n" * 2, "\n" * 2, "#" * 80, "\n" * 2))

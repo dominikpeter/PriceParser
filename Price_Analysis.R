@@ -1,4 +1,4 @@
-
+rm(list = ls())
 
 library(dplyr)
 library(ggplot2)
@@ -43,14 +43,13 @@ median <- df_boxplot %>%
 df_boxplot_reshape <- df_boxplot %>% 
   select(-Color) %>% 
   reshape2::dcast(ArtikelId ~ Company, value.var="Preis", fun.aggregate = max) %>% 
-  mutate(Sanitas = ifelse(CRH > Sanitas, TRUE, FALSE),
-         Hug = ifelse(CRH > Hug, TRUE, FALSE),
-         Saneo = ifelse(CRH > Hug, TRUE, FALSE),
-         SaniDusch = ifelse(CRH > Sanitas, TRUE, FALSE),
-         Sabag = ifelse(CRH > Sanitas, TRUE, FALSE),
-         CRH = NaN) %>% 
+  mutate(Sanitas = ifelse(CRH > Sanitas, 'Ja', "Nein"),
+         Hug = ifelse(CRH > Hug, 'Ja', "Nein"),
+         Saneo = ifelse(CRH > Samep, 'Ja', "Nein"),
+         SaniDusch = ifelse(CRH > SaniDusch, 'Ja', "Nein"),
+         Sabag = ifelse(CRH > Sabag, 'Ja', "Nein"),
+         CRH = "") %>% 
   reshape2::melt(id.vars=1, variable.name = "Company", value.name="PriceCheck")
-
 
 
 
@@ -65,10 +64,10 @@ df_boxplot %>%
   filter(Preis<1000) %>% 
   filter(Sales_LTM>0) %>% 
   filter(Category_Level_1 != "Ersatzteile") %>% 
-  #tidyr::drop_na() %>% 
+  tidyr::drop_na() %>% 
   ggplot(aes(x=Company, y=Preis, fill=Color)) +
   geom_boxplot(color="black", notch = TRUE) +
-  geom_jitter(aes(color=PriceCheck), alpha=0.5) +
+  geom_jitter(aes(color=PriceCheck), alpha=0.2) +
   geom_hline(data = median, aes(yintercept = Median),
              size=0.6, alpha=0.95, linetype = 1, color='#34495e') + 
   facet_wrap(~Category_Level_1, scales = "free") +
