@@ -17,8 +17,8 @@ import turbodbc
 
 
 def load_json(path):
-    with open(path) as j:
-        data = json.load(j)
+    with codecs.open(path, encoding='utf-8') as j:
+        data = json.load(j, )
     return data
 
 
@@ -145,6 +145,30 @@ def check_settings(json, key, on):
     return c
 
 
+def replace_column_after_join(df, colname_preis,
+                              colname_text, key, on):
+    df['Joined_on_y'] = on
+
+    df[colname_preis] = np.where(
+        pd.isnull(df[colname_preis]),
+                  df['Preis_y'],
+                  df[colname_preis])
+
+    df[colname_text] = np.where(
+        pd.isnull(df[colname_text]),
+                  df['Art_Txt_Lang_y'],
+                  df[colname_text])
+
+    df['Joined_{}_on'.format(key)] = np.where(
+        (pd.isnull(df['Joined_{}_on'.format(key)])) & (
+            pd.notnull(df['Preis_y'])),
+        df['Joined_on_y'], df['Joined_{}_on'.format(key)])
+
+    df = df[[i for i in df.columns if not re.match(
+        '.+(_y|Level_5|Level_6|Closest)', i)]]
+    return df
+
+
 def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
     df_r_ = df_r.copy()
     if check_settings(settings, key, on):
@@ -178,27 +202,13 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
         df_j = df_j[[i for i in df_j.columns if re.match('.+_y', i)]]
 
         df_l = df_l.join(df_j, how='left', lsuffix='', rsuffix='_y')
-        df_l = replace_column_after_join(
-            df_l, colname_preis, colname_text, key, on)
+        df_l = replace_column_after_join(df_l,
+                                         colname_preis,
+                                         colname_text,
+                                         key, on)
     else:
         print("Won't join {} on {} due to settings".format(key, on))
     return df_l
-
-
-def replace_column_after_join(df, colname_preis,
-                              colname_text, key, on):
-    df['Joined_on_y'] = on
-    df[colname_preis] = np.where(
-        pd.isnull(df[colname_preis]), df['Preis_y'], df[colname_preis])
-    df[colname_text] = np.where(
-        pd.isnull(df[colname_text]), df['Art_Txt_Lang_y'], df[colname_text])
-    df['Joined_{}_on'.format(key)] = np.where(
-        (pd.isnull(df['Joined_{}_on'.format(key)])) & (
-            pd.notnull(df['Preis_y'])),
-        df['Joined_on_y'], df['Joined_{}_on'.format(key)])
-    df = df[[i for i in df.columns if not re.match(
-        '.+(_y|Level_5|Level_6)', i)]]
-    return df
 
 
 def join_on_string_distance(df_l, df_r, key,
@@ -244,13 +254,16 @@ def join_on_string_distance(df_l, df_r, key,
         colname_distance = 'Distance_{}'.format(key)
         colname_closest = 'Closest_{}'.format(key)
 
-        distance_df = pd.DataFrame(
-            arr,
-            columns=[colname_distance, colname_closest],
-            index=ix)
+        distance_df = pd.DataFrame(arr,
+                                   columns=[colname_distance,
+                                            colname_closest],
+                                   dtype=float, index=ix)
+
+        cols_dist
+        distance_df[[cols_dist]] = distance_df[[cols_dist]].astype(float)
 
         begin_x = len(distance_df)
-        index_to_drop = distance_df[distance_df['Distance_{}'.format(key)].astype(
+        index_to_drop = distance_df[distance_df[colname_distance].astype(
             float) > threshold].index
         distance_df.drop(index_to_drop, inplace=True)
         deleted_x = begin_x - len(distance_df)
@@ -258,14 +271,20 @@ def join_on_string_distance(df_l, df_r, key,
         print('With a Threshold of {}, deleted {} Rows (% {})\n'.format(
             threshold, deleted_x, round(deleted_x / begin_x * 100, 2)))
 
-        distance_df = distance_df.merge(
-            df_r_, how='left', left_on='Closest_{}'.format(key),
-            right_index=True, suffixes=('', '_y'))
+        distance_df = distance_df.merge(df_r_,
+                                        how='left',
+                                        left_on='Closest_{}'.format(key),
+                                        right_index=True,
+                                        suffixes=('', '_y'))
 
         df_l = df_l.join(distance_df, how='left', lsuffix='', rsuffix='_y')
 
+        print(df_l.columns)
+        print(np.nanmax(df_l[colname_distance]))
+
         df_l = replace_column_after_join(
             df_l, colname_preis, colname_text, key, on='Text Similarity')
+
     else:
         print("Won't join {} on {} due to settings\n".format(key, on))
     return df_l
@@ -278,18 +297,18 @@ def prepare_data(join_df_path,
     join_df = csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
-    main_df = join_on_id(main_df, join_df, key, 'SGVSB',
-                         settings['Companies'], threshold=threshold)
-    main_df = join_on_id(main_df, join_df, key, 'EAN',
-                         settings['Companies'], threshold=threshold)
-    main_df = join_on_id(main_df, join_df, key, 'idHersteller',
-                         settings['Companies'], threshold=threshold)
+
+    for i in ['SGVSB', 'EAN', 'idHersteller']:
+        main_df = join_on_id(main_df, join_df, key, i,
+                             settings['Companies'], threshold=threshold)
+
     main_df = join_on_string_distance(
         main_df, join_df, key, settings['Companies'],
         threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
 
     preis_col = [i for i in main_df.loc[:,
-                                        'Preis':].columns if re.match('Preis.*', i)]
+                                        'Preis':].columns if re.match('Preis.*',
+                                                                      i)]
 
     main_df[preis_col] = main_df[preis_col].apply(
         lambda x: check_distance(x, threshold), axis=1)
@@ -339,22 +358,21 @@ def export_pandas(main_df, path,
         print('Permission was denied when writing to Excel\n')
 
 
-def main(settings):
-    currentpath = os.getcwd()
+def main(settings, currentpath):
 
     files = [i for i in glob.iglob(os.path.join(
         currentpath) + '/Output/*.csv', recursive=True)]
 
     # get settings parameters
-    main_file_pattern = settings['Main File']
-    text_distance = settings['Max Text Distance']
-    price_threshold = settings['Max Price Difference']
-    chunksize = settings['Chunksize']
-    parallel = settings['Parallel Jobs']
-    csv_export = settings['Export']['CSV']
-    excel_export = settings['Export']['Excel']
-    export_name = settings['Export']['Name']
-    timetag_bool = settings['Export']['Timetag']
+    main_file_pattern   = settings['Main File']
+    text_distance       = settings['Max Text Distance']
+    price_threshold     = settings['Max Price Difference']
+    chunksize           = settings['Chunksize']
+    parallel            = settings['Parallel Jobs']
+    csv_export          = settings['Export']['CSV']
+    excel_export        = settings['Export']['Excel']
+    export_name         = settings['Export']['Name']
+    timetag_bool        = settings['Export']['Timetag']
 
     timetag = None
 
@@ -398,8 +416,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Example with long option names')
     parser.add_argument('--settings', default="Sanitär", dest="settings",
-                        help="Name of Setting", type=str)
+        help="Name of Setting", type=str)
 
+    currentpath = os.getcwd()
 
     args = parser.parse_args()
     setting_to_apply = args.settings
@@ -410,4 +429,4 @@ if __name__ == "__main__":
     print("{}{}{}Article Matching for Price_Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(
         "\n" * 2, "#" * 80, "\n" * 2, "\n" * 2, "#" * 80, "\n" * 2))
 
-    main()
+    main(settings, currentpath)
