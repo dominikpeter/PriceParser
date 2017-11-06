@@ -261,7 +261,7 @@ def join_on_string_distance(df_l, df_r, key,
                                    columns=cols_dist,
                                    dtype=float, index=ix)
 
-        distance_df[[cols_dist]] = distance_df[[cols_dist]].astype(float)
+        distance_df[cols_dist] = distance_df[cols_dist].astype(float)
 
         begin_x = len(distance_df)
         index_to_drop = distance_df[distance_df[
@@ -362,15 +362,15 @@ def main(settings, currentpath):
         currentpath) + '/Output/*.csv', recursive=True)]
 
     # get settings parameters
-    main_file_pattern   = settings['Main File']
-    text_distance       = settings['Max Text Distance']
-    price_threshold     = settings['Max Price Difference']
-    chunksize           = settings['Chunksize']
-    parallel            = settings['Parallel Jobs']
-    csv_export          = settings['Export']['CSV']
-    excel_export        = settings['Export']['Excel']
-    export_name         = settings['Export']['Name']
-    timetag_bool        = settings['Export']['Timetag']
+    main_file_pattern = settings['Main File']
+    text_distance     = settings['Max Text Distance']
+    price_threshold   = settings['Max Price Difference']
+    chunksize         = settings['Chunksize']
+    parallel          = settings['Parallel Jobs']
+    csv_export        = settings['Export']['CSV']
+    excel_export      = settings['Export']['Excel']
+    export_name       = settings['Export']['Name']
+    timetag_bool      = settings['Export']['Timetag']
 
     timetag = None
 
