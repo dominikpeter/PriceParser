@@ -11,6 +11,8 @@ Article_Matching_v0\.1\.py
 
 *.xml
 
+*.csv
+
 Price-Comparison\.xlsx
 
 Price-Comparison\.csv
