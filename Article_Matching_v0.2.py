@@ -339,7 +339,7 @@ def prepare_data(join_df_path,
 
     to_clean = [i for i in main_df if re.match('Preis_{}'.format(key), i)]
     [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
-    print(to_clean)
+
     main_df[to_clean] = main_df[to_clean
                                 ].apply(lambda x: clean_join(x), axis=1)
 
