@@ -19,12 +19,14 @@ import turbodbc
 def load_json(path):
     with codecs.open(path, encoding='utf-8') as j:
         data = json.load(j, )
+
     return data
 
 
 def load_sql_text(path):
     with codecs.open(path, encoding='utf-8') as sql:
         file = sql.read()
+
     return file
 
 
@@ -43,6 +45,7 @@ def add_columns(df, key):
             df[x] = np.nan
     for i in cols:
         check_columns(i)
+
     return df
 
 
@@ -51,16 +54,19 @@ def create_connection_string_turbo(server, database):
     constr = 'Driver={ODBC Driver 13 for SQL Server};Server=' + \
         server + ';Database=' + database + ';Trusted_Connection=yes;'
     con = turbodbc.connect(connection_string=constr, turbodbc_options=options)
+
     return con
 
 
 def sql_to_pandas(connection, query, *args, **kwargs):
     df = pd.read_sql(query, connection, *args, **kwargs)
+
     return df
 
 
 def csv_to_pandas(csv_filepath, *args, **kwargs):
     df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
+
     return df
 
 
@@ -78,6 +84,7 @@ def check_distance(x, threshold=0.5):
             r = np.nan
         list_to_return.append(r)
         i += 1
+
     return list_to_return
 
 
@@ -108,6 +115,7 @@ def modify_dataframe(df):
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
+
     return clean_text(df)
 
 
@@ -115,6 +123,7 @@ def clean_text(df, pattern='\t|\n|\r'):
     for i in df.columns:
         if df[i].dtype == 'object':
             df[i] = df[i].str.replace(pattern, ' ')
+
     return df
 
 
@@ -133,6 +142,7 @@ def check_input_string_boolean(x):
         return True
     if x.lower() in ('no', 'nein', 'n', 'false'):
         return False
+
     return False
 
 
@@ -142,6 +152,7 @@ def check_settings(json, key, on):
         c = json[key][on]
     except KeyError:
         print('Key not found \n')
+
     return c
 
 
@@ -166,6 +177,7 @@ def replace_column_after_join(df, colname_preis,
 
     df = df[[i for i in df.columns if not re.match(
         '.+(_y|Level_5|Level_6|Closest)', i)]]
+
     return df
 
 
@@ -202,12 +214,14 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
         df_j = df_j[[i for i in df_j.columns if re.match('.+_y', i)]]
 
         df_l = df_l.join(df_j, how='left', lsuffix='', rsuffix='_y')
+
         df_l = replace_column_after_join(df_l,
                                          colname_preis,
                                          colname_text,
                                          key, on)
     else:
         print("Won't join {} on {} due to settings".format(key, on))
+
     return df_l
 
 
@@ -217,6 +231,7 @@ def join_on_string_distance(df_l, df_r, key,
                             columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
     df_r_ = df_r.copy()
     on = 'Text Similarity'
+
     if check_settings(settings, key, on):
         print('Joining Data on {}\n'.format(on))
         df_l = add_columns(df_l, key)
@@ -285,6 +300,7 @@ def join_on_string_distance(df_l, df_r, key,
 
     else:
         print("Won't join {} on {} due to settings\n".format(key, on))
+
     return df_l
 
 
@@ -310,6 +326,7 @@ def prepare_data(join_df_path,
 
     main_df[preis_col] = main_df[preis_col].apply(
         lambda x: check_distance(x, threshold), axis=1)
+
     return main_df
 
 
@@ -328,6 +345,7 @@ def join_meta_data(main_df, path, sales=True, meta=True):
         meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(
             meta, how='left', on='SGVSB',  suffixes=('', '_y'))
+
     return main_df
 
 
@@ -337,8 +355,10 @@ def export_pandas(main_df, path,
                   index=False, timetag=None):
     if timetag:
         filename = os.path.join(path, timetag + '_' + name)
+
     else:
         filename = os.path.join(path, name)
+
     try:
         if to_csv:
             filename = filename + '.csv'
@@ -347,6 +367,7 @@ def export_pandas(main_df, path,
                            encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
     except PermissionError:
         print('Permission was denied when writing to CSV\n')
+
     try:
         if to_excel:
             filename = filename + '.xlsx'
