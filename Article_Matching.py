@@ -119,7 +119,8 @@ def modify_dataframe(df):
 
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
 
-    df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
+    df['EAN'] = df['Preis_EA
+    N'].fillna(df['Art_Nr_EAN'])
 
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
 
@@ -200,7 +201,7 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
     df_r_ = df_r.copy()
 
     if check_settings(settings, key, on):
-        print('Joining Data on {} \n'.format(on))
+        print('Joining Data on {}{}'.format(on, "\t"*8), end='\r')
 
         try:
             lon, ron = on
@@ -422,9 +423,11 @@ def main(settings, currentpath):
         timetag = now.strftime('%Y-%m-%d')
 
     if re.match(".+\.sql", main_file_pattern):
-        query_ = load_sql_text(os.path.join(path,"SQL", main_file_pattern))
-        main_file = sql_to_pandas(con, query_)
-
+        try:
+            query_ = load_sql_text(os.path.join(path,"SQL", main_file_pattern))
+            main_file = sql_to_pandas(con, query_)
+        except turbodbc.Error:
+            print("Could not connect to Database")
     else:
         main_file = [f for f in files if re.match(
             r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]

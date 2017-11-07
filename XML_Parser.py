@@ -6,6 +6,7 @@ Parse XML
 """
 
 import argparse
+import sys
 import collections
 import csv
 import glob
@@ -484,5 +485,7 @@ if __name__ == "__main__":
         pool = multiprocessing.Pool(n_jobs)
         pool.map(func, XMLS)
     else:
-        for xml in tqdm(XMLS):
+        for xml in XMLS:
+            xml_text = os.path.split(xml)[-1]
+            print("Parsing {}{}".format(xml_text, "\t"*5), end="\r")
             process_xml(currentpath, archiv, csv_arg, excel_arg, xml)
