@@ -1,7 +1,6 @@
 {
   "Sanitär": {
     "Main File": "Richner",
-    "Main File from Database": false,
     "Max Text Distance": 0.4,
     "Max Price Difference": 0.5,
     "Chunksize": 1500,
@@ -38,6 +37,38 @@
         "Text Similarity": true
       },
       "TeamHug": {
+        "SGVSB": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      }
+    },
+    "SQL": {
+      "Server": "CRHBUSADWH02",
+      "Sales Query Path": "",
+      "Meta": "Select * from meta"
+    }
+  },
+  "Haustechnik": {
+    "Main File": "HT_Meta.sql",
+    "Max Text Distance": 0.4,
+    "Max Price Difference": 0.5,
+    "Chunksize": 1500,
+    "Parallel Jobs": 0,
+    "Export": {
+      "CSV": true,
+      "Excel": false,
+      "Timetag": true,
+      "Name": "Price-Comparison"
+    },
+    "Companies": {
+      "Sanitas": {
+        "SGVSB": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Sabag": {
         "SGVSB": true,
         "EAN": true,
         "idHersteller": true,

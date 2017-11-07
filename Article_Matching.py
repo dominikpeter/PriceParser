@@ -356,14 +356,14 @@ def join_meta_data(main_df, path, sales=True, meta=True):
     con = create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
     if sales:
         print('Getting Sales Data from Database...')
-        sales_query = load_sql_text(os.path.join(path, 'Sales.sql'))
+        sales_query = load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
         sales = sql_to_pandas(con, sales_query)
         main_df = main_df.merge(
             sales, how='left', on='SGVSB',  suffixes=('', '_y'))
 
     if meta:
         print('Getting Meta Data from Database...')
-        meta_query = load_sql_text(os.path.join(path, 'Meta.sql'))
+        meta_query = load_sql_text(os.path.join(path, "SQL", 'Meta.sql'))
         meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(
             meta, how='left', on='SGVSB',  suffixes=('', '_y'))
@@ -421,8 +421,14 @@ def main(settings, currentpath):
         now = datetime.datetime.now()
         timetag = now.strftime('%Y-%m-%d')
 
-    main_file = [f for f in files if re.match(
-        r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]
+    if re.match(".+\.sql", main_file_pattern):
+        query_ = load_sql_text(os.path.join(path,"SQL", main_file_pattern))
+        main_file = sql_to_pandas(con, query_)
+
+    else:
+        main_file = [f for f in files if re.match(
+            r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]
+
 
     companies_to_compare = [i for i in settings['Companies']]
     compiler = re.compile(
