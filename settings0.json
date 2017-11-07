@@ -19,6 +19,24 @@
         "idHersteller": true,
         "Text Similarity": true
       },
+      "Sabag": {
+        "SGVSB": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Saneo": {
+        "SGVSB": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamSaniDusch": {
+        "SGVSB": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
       "TeamHug": {
         "SGVSB": true,
         "EAN": true,

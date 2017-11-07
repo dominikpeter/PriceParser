@@ -89,31 +89,41 @@ def check_distance(x, threshold=0.5):
 
 
 def modify_dataframe(df):
-    df = df.fillna('')
-    df['Farbe'] = df['AF_Txt']
-    df['Ausführung'] = df['AFZ_Txt']
     df[['ArtikelId', 'FarbId',
         'AusführungsId',
         'Art_Nr_Hersteller']] = df[['ArtikelId',
                                     'FarbId',
                                     'AusführungsId',
                                     'Art_Nr_Hersteller']].astype(str)
+    fill_cols = ["Farbe",
+                 "Ausführung",
+                 "AusführungsId",
+                 "Art_Nr_Hersteller",
+                 "Art_Nr_Hersteller_Firma"]
+
+    df[fill_cols] = df[fill_cols].fillna('')
+
     df['FarbId'] = df['FarbId'].replace('', '000')
     df['SGVSB'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
         lambda x: ''.join(x), axis=1)
+
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
 
     cols_ = ['FarbId',
              'AusführungsId',
              'Art_Nr_Hersteller',
-             'Art_Nr_Hersteller_Firma'
-             ]
+             'Art_Nr_Hersteller_Firma']
+
     df.loc[check_id,
            'idHersteller'] = df.loc[check_id,
-                                    cols_].apply(lambda x: ''.join(x), axis=1)
+                                    cols_].apply(lambda x: ''.join(x),
+                                                 axis=1)
+
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
+
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
+
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
 
     return clean_text(df)
@@ -369,10 +379,10 @@ def export_pandas(main_df, path,
                   to_csv=True, to_excel=True,
                   index=False, timetag=None):
     if timetag:
-        filename = os.path.join(path, timetag + '_' + name)
+        filename = os.path.join(path, "Matching", timetag + '_' + name)
 
     else:
-        filename = os.path.join(path, name)
+        filename = os.path.join(path,"Matching", name)
 
     try:
         if to_csv:
@@ -434,6 +444,7 @@ def main(settings, currentpath):
             settings, threshold=price_threshold,
             distance=text_distance, n_jobs=parallel,
             chunksize=chunksize)
+
     try:
         main_df = join_meta_data(
             main_df, path=currentpath, sales=True, meta=True)
