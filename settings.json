@@ -14,7 +14,7 @@
     },
     "Companies": {
       "Sanitas": {
-        "SGVSB": false,
+        "SGVSB": true,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
