@@ -62,13 +62,19 @@
       "Name": "Price-Comparison"
     },
     "Companies": {
-      "Sanitas": {
+      "SpaeterHT": {
         "SGVSB": false,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
-      "Sabag": {
+      "Tobler": {
+        "SGVSB": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "DebrunnerAciferTB": {
         "SGVSB": true,
         "EAN": true,
         "idHersteller": true,

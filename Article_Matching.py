@@ -96,9 +96,10 @@ def modify_dataframe(df):
                  'Art_Nr_Hersteller',
                  'Art_Nr_Hersteller_Firma']
 
-    df[fill_cols] = df[fill_cols].astype(str).fillna('')
+    df[fill_cols] = df[fill_cols].fillna('').astype(str)
 
-    df['FarbId'] = df['FarbId'].replace('', '000')
+    df['FarbId'] = df['FarbId'].replace('', '000').fillna('000')
+
     df['SGVSB'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].fillna(''
                         ).apply(lambda x: ''.join(x), axis=1)
 
@@ -119,8 +120,7 @@ def modify_dataframe(df):
 
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
 
-    df['EAN'] = df['Preis_EA
-    N'].fillna(df['Art_Nr_EAN'])
+    df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
 
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
 
