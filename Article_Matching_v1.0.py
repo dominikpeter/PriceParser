@@ -256,7 +256,6 @@ def join_on_string_distance(df_l, df_r, key,
 
         X = df_l.loc[pd.isnull(df_l[colname_preis]), :]
         ix = X.index
-        print('Distance Joining {}\n'.format(key))
         print('Remaining Columns to match = {} ({} Batches)\n'.format(
             X.shape[0], math.ceil(X.shape[0] / chunksize)))
 
