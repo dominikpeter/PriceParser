@@ -89,25 +89,21 @@ def check_distance(x, threshold=0.5):
 
 
 def modify_dataframe(df):
-    df[['ArtikelId', 'FarbId',
-        'AusführungsId',
-        'Art_Nr_Hersteller']] = df[['ArtikelId',
-                                    'FarbId',
-                                    'AusführungsId',
-                                    'Art_Nr_Hersteller']].astype(str)
-    fill_cols = ["Farbe",
-                 "Ausführung",
-                 "AusführungsId",
-                 "Art_Nr_Hersteller",
-                 "Art_Nr_Hersteller_Firma"]
 
-    df[fill_cols] = df[fill_cols].fillna('')
+    fill_cols = ['ArtikelId',
+                 'FarbId',
+                 'AusführungsId',
+                 'Art_Nr_Hersteller',
+                 'Art_Nr_Hersteller_Firma']
+
+    df[fill_cols] = df[fill_cols].astype(str).fillna('')
 
     df['FarbId'] = df['FarbId'].replace('', '000')
-    df['SGVSB'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
-        lambda x: ''.join(x), axis=1)
+    df['SGVSB'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].fillna(''
+                        ).apply(lambda x: ''.join(x), axis=1)
 
-    check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
+    check_id = df['Art_Nr_Hersteller'].apply(lambda x: len(x) > 3)
+
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
 
     cols_ = ['FarbId',
@@ -117,8 +113,9 @@ def modify_dataframe(df):
 
     df.loc[check_id,
            'idHersteller'] = df.loc[check_id,
-                                    cols_].apply(lambda x: ''.join(x),
-                                                 axis=1)
+                                    cols_].fillna(''
+                                    ).apply(lambda x: ''.join(x),
+                                            axis=1)
 
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
 
