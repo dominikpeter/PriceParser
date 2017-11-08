@@ -82,7 +82,7 @@ def modify_dataframe(df, idHersteller_Columns = ['FarbId',
     df['idHersteller'] = df['idHersteller'].replace(
                                                 '', np.nan).replace(
                                                                 '\s', np.nan)
-
+    df['Preis_EAN'] = df['Preis_EAN'].replace('', np.nan)
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
 
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
@@ -299,9 +299,9 @@ def prepare_data(join_df_path,
 
     to_clean = [i for i in main_df if re.match('Preis_{}'.format(key), i)]
     [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
-
-    main_df[to_clean] = main_df[to_clean
-                                ].apply(lambda x: clean_join(x), axis=1)
+    # 
+    # main_df[to_clean] = main_df[to_clean
+    #                             ].apply(lambda x: clean_join(x), axis=1)
 
     return main_df
 
