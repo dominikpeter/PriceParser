@@ -1,21 +1,21 @@
 import argparse
 import codecs
 import csv
+import datetime
 import glob
 import json
 import math
 import os
 import re
-import datetime
 
 import numpy as np
 import pandas as pd
 import tqdm
-from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.feature_extraction.text import CountVectorizer
 import turbodbc
-import PriceParser as pp
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import pairwise_distances
 
+import PriceParser as pp
 
 
 def add_columns(df, key):

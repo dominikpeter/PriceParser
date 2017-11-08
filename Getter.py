@@ -8,6 +8,7 @@ from functools import partial
 import requests
 from lxml import html
 from tqdm import tqdm
+
 import PriceParser as pp
 
 
@@ -61,14 +62,6 @@ if __name__ == '__main__':
     r = requests.get(mainpage)
     html_content = html.fromstring(r.content)
     g = get_download_url(html_content, html_content.base)
-    # path = os.path.join(os.path.sep, '\\\\CRHBUSADCS01',
-    #                                 'Data',
-    #                                 'PublicCitrix',
-    #                                 '084_Bern_Laupenstrasse',
-    #                                 'CM',
-    #                                 'Analysen',
-    #                                 'IGH',
-    #                                 'XML')
 
     pp.create_folder(currentpath, 'XML')
 
