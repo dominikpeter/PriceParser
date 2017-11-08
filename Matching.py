@@ -14,20 +14,8 @@ import tqdm
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.feature_extraction.text import CountVectorizer
 import turbodbc
+import PriceParser as pp
 
-
-def load_json(path):
-    with codecs.open(path, encoding='utf-8') as j:
-        data = json.load(j, )
-
-    return data
-
-
-def load_sql_text(path):
-    with codecs.open(path, encoding='utf-8') as sql:
-        file = sql.read()
-
-    return file
 
 
 def add_columns(df, key):
@@ -45,27 +33,6 @@ def add_columns(df, key):
             df[x] = np.nan
     for i in cols:
         check_columns(i)
-
-    return df
-
-
-def create_connection_string_turbo(server, database):
-    options = turbodbc.make_options(prefer_unicode=True)
-    constr = 'Driver={ODBC Driver 13 for SQL Server};Server=' + \
-        server + ';Database=' + database + ';Trusted_Connection=yes;'
-    con = turbodbc.connect(connection_string=constr, turbodbc_options=options)
-
-    return con
-
-
-def sql_to_pandas(connection, query, *args, **kwargs):
-    df = pd.read_sql(query, connection, *args, **kwargs)
-
-    return df
-
-
-def csv_to_pandas(csv_filepath, *args, **kwargs):
-    df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
 
     return df
 
@@ -142,35 +109,6 @@ def clean_join(x):
     return x
 
 
-def batch(iterable, n=1):
-    from scipy import sparse
-    if sparse.issparse(iterable) or isinstance(
-            iterable,
-            (np.ndarray, np.generic)):
-        row_l = iterable.shape[0]
-        for ndx in range(0, row_l, n):
-            yield iterable[ndx:min(ndx + n, row_l), ]
-
-
-def check_input_string_boolean(x):
-    if x.lower() in ('yes', 'ja', 'y', 'j', 'true'):
-        return True
-    if x.lower() in ('no', 'nein', 'n', 'false'):
-        return False
-
-    return False
-
-
-def check_settings(json, key, on):
-    c = True
-    try:
-        c = json[key][on]
-    except KeyError:
-        print('Key not found \n')
-
-    return c
-
-
 def replace_column_after_join(df, colname_preis,
                               colname_text, key, on):
     df['Joined_on_y'] = on
@@ -200,7 +138,7 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
 
     df_r_ = df_r.copy()
 
-    if check_settings(settings, key, on):
+    if pp.check_settings(settings, key, on):
         print('Joining Data on {}{}'.format(on, "\t"*8), end='\r')
 
         try:
@@ -251,7 +189,7 @@ def join_on_string_distance(df_l, df_r, key,
     df_r_ = df_r.copy()
     on = 'Text Similarity'
 
-    if check_settings(settings, key, on):
+    if pp.check_settings(settings, key, on):
         print('Joining Data on {}\n'.format(on))
         df_l = add_columns(df_l, key)
         n_jobs = max(1, n_jobs)
@@ -277,7 +215,8 @@ def join_on_string_distance(df_l, df_r, key,
 
         arr = np.empty((X.shape[0], 2))
 
-        for i, a in tqdm.tqdm(zip(batch(X, chunksize), batch(arr, chunksize))):
+        for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize),
+                                  pp.batch(arr, chunksize))):
             distance = pairwise_distances(i, Y, metric='cosine', n_jobs=n_jobs)
             distance_min = distance.min(axis=1)
             distance_argmin = distance.argmin(axis=1)
@@ -327,7 +266,7 @@ def prepare_data(join_df_path,
                  settings, threshold, distance,
                  n_jobs=0, chunksize=2000):
 
-    join_df = csv_to_pandas(join_df_path)
+    join_df = pp.csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
 
@@ -354,18 +293,18 @@ def prepare_data(join_df_path,
 
 
 def join_meta_data(main_df, path, sales=True, meta=True):
-    con = create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
+    con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
     if sales:
         print('Getting Sales Data from Database...')
-        sales_query = load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
-        sales = sql_to_pandas(con, sales_query)
+        sales_query = pp.load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
+        sales = pp.sql_to_pandas(con, sales_query)
         main_df = main_df.merge(
             sales, how='left', on='SGVSB',  suffixes=('', '_y'))
 
     if meta:
         print('Getting Meta Data from Database...')
-        meta_query = load_sql_text(os.path.join(path, "SQL", 'Meta.sql'))
-        meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
+        meta_query = pp.load_sql_text(os.path.join(path, "SQL", 'Meta.sql'))
+        meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(
             meta, how='left', on='SGVSB',  suffixes=('', '_y'))
 
@@ -425,7 +364,7 @@ def main(settings, currentpath):
     if re.match(".+\.sql", main_file_pattern):
         try:
             query_ = load_sql_text(os.path.join(path,"SQL", main_file_pattern))
-            main_file = sql_to_pandas(con, query_)
+            main_file = pp.sql_to_pandas(con, query_)
         except turbodbc.Error:
             print("Could not connect to Database")
     else:
@@ -441,7 +380,7 @@ def main(settings, currentpath):
         i)[-1].split('-')[0]: j for i, j in zip(
         files_to_match, files_to_match)}
 
-    main_df = csv_to_pandas(main_file[0])
+    main_df = pp.csv_to_pandas(main_file[0])
 
     for i in files_to_match:
         print('\nMatching Data from {}\n{}\n'.format(i, '#' * 80))
@@ -471,10 +410,13 @@ if __name__ == "__main__":
 
     currentpath = os.getcwd()
 
+    for i in ['Matching', 'SQL', 'Files']:
+        pp.create_folder(currentpath, i)
+
     args = parser.parse_args()
     setting_to_apply = args.settings
 
-    settings = load_json(os.path.join(currentpath, 'settings.json'))
+    settings = pp.load_json(os.path.join(currentpath, 'settings.json'))
     settings = settings[setting_to_apply]
 
     print("{}{}{}Article Matching for Price_Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(

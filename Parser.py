@@ -7,7 +7,6 @@ Parse XML
 
 import argparse
 import sys
-import collections
 import csv
 import glob
 import multiprocessing
@@ -19,13 +18,8 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 from tqdm import tqdm
+import PriceParser as pp
 
-
-def rec_dd():
-    """ Recursive Defaultdict
-    Recursive Defaultdict
-    """
-    return collections.defaultdict(rec_dd)
 
 def switch_to_right(c):
     if any(c): #at least one have to be a value
@@ -78,15 +72,6 @@ def get_tree(file):
         print('Error')
 
 
-def create_folder(path, folder):
-    """Folder Creator
-    Create Folder if it doesn't exist
-    """
-    directory = os.path.join(path, folder)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-
 def array_to_string(array, sep=' '):
     if isinstance(array, list):
         return sep.join(array)
@@ -118,7 +103,7 @@ class XML_Parser:
 
     def __init__(self, tree):
         self.tree = tree
-        self.dict_ = rec_dd()
+        self.dict_ = pp.rec_dd()
         self.cat_dict = {}
 
         self.Art_Nr_Anbieter = ''
@@ -412,13 +397,6 @@ def process_xml(path__, archiv__, csv__, excel__, file__):
                       archiv_=archiv__, csv_=csv__, excel_=excel__)
     #print('Processed: Filename {}'.format(file__))
 
-def check_input_string_boolean(x):
-    if x.lower() in ('yes', 'ja', 'y', 'j', 'true'):
-        return True
-    if x.lower() in ('no', 'nein', 'n', 'false'):
-        return False
-    return False
-
 
 if __name__ == "__main__":
 
@@ -448,16 +426,16 @@ if __name__ == "__main__":
         currentpath, 'XML') + '/**/*.xml', recursive=True)]
 
     n_jobs = args.n_jobs
-    archiv = check_input_string_boolean(args.archiv)
-    excel_arg = check_input_string_boolean(args.excel_arg)
-    csv_arg = check_input_string_boolean(args.csv_arg)
+    archiv = pp.check_input_string_boolean(args.archiv)
+    excel_arg = pp.check_input_string_boolean(args.excel_arg)
+    csv_arg = pp.check_input_string_boolean(args.csv_arg)
 
     if archiv:
-        create_folder(currentpath, "Archiv")
+        pp.create_folder(currentpath, "Archiv")
     if excel_arg:
-        create_folder(currentpath, "Excel")
+        pp.create_folder(currentpath, "Excel")
     if csv_arg:
-        create_folder(currentpath, "Output")
+        pp.create_folder(currentpath, "Output")
 
     if args.pattern:
         MATCH = args.pattern.split(",")

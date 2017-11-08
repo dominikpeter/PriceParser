@@ -8,6 +8,7 @@ from functools import partial
 import requests
 from lxml import html
 from tqdm import tqdm
+import PriceParser as pp
 
 
 def get_download_url(html_content, baseUrl=""):
@@ -41,20 +42,10 @@ def extract_to_path(d, path, n_jobs_=0):
         for i in tqdm(d.items()):
             save_xml_from_url(path, i)
 
-def create_folder(path, folder):
-    """Folder Creator
-    Create Folder if it doesn't exist
-    """
-    directory = os.path.join(path, folder)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Example with long option names')
     parser.add_argument('--n_jobs',default=0, dest="n_jobs", help="Number of Parallel Jobs", type=int)
-
 
     mainpage = 'http://www.igh.ch/de/kataloge.html'
 
@@ -66,7 +57,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     n_jobs = args.n_jobs
-
 
     r = requests.get(mainpage)
     html_content = html.fromstring(r.content)
@@ -80,7 +70,7 @@ if __name__ == '__main__':
     #                                 'IGH',
     #                                 'XML')
 
-    create_folder(currentpath, 'XML')
+    pp.create_folder(currentpath, 'XML')
 
     path = os.path.join(currentpath, 'XML')
 
