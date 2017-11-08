@@ -1,11 +1,13 @@
 
-SELECT SGVSB
+SELECT UniqueId
   ,Sales_LTM = sum(Sales)
   ,Margin_LTM = sum(Margin)
   ,Quantity_LTM = sum(Quantity)
   ,ObjectRate = max(ObjectRate)
+
 FROM (
-SELECT SGVSB = idItemOld
+
+SELECT UniqueId = idItemOld
   ,Sales = sum(Sales)
   ,Margin = sum(Margin)
   ,Quantity = sum(Quantity)
@@ -20,7 +22,7 @@ group by idItemOld
 
 UNION ALL
 
-SELECT SGVSB = substring(i.iditemorigin, 2, 500)
+SELECT UniqueId = substring(i.iditemorigin, 2, 500)
   ,Sales = sum(Sales)
   ,Margin = sum(Margin)
   ,Quantity = sum(Quantity)
@@ -31,5 +33,6 @@ where itemgroupgrouphierarchyname_l1 = '05-Sanitär'
 and Date > dateadd(month, -12, getdate())
 and Sales > 0
 group by substring(i.iditemorigin, 2, 500)
+
 ) x
-GROUP BY SGVSB
+GROUP BY UniqueId

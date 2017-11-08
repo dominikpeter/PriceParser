@@ -11,17 +11,54 @@ import re
 import numpy as np
 import pandas as pd
 
-import Article_Matching as am
+import PriceParser as pp
 
 
-def csv_to_pandas(csv_filepath, *args, **kwargs):
-    df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
+def main(left, right):
 
-    return df
+    currentpath = os.getcwd()
+
+    left_and_path = os.path.join(currentpath,"Matching", left)
+    right_and_path = os.path.join(currentpath, "Files", right)
+
+    print("Loading lefthandside...")
+    main_df = pp.csv_to_pandas(left_and_path)
+
+    print("Loading righthandside...")
+    join_df = pd.read_excel(right_and_path)
+
+    main_df['Join_ArtikelId'] = main_df["ArtikelId"].astype(int)
+
+    main_df = main_df.merge(join_df[['Wgr-Nr.',
+                                     'Warengruppebezeichnung',
+                                     'Preisbasis',
+                                     '02\nRichner\nSoKaFa',
+                                     'SGVSB-Nr.']],
+                            how="left", left_on="Join_ArtikelId", right_on="SGVSB-Nr.")
+
+    main_df['Preisfaktor'] = main_df['02\nRichner\nSoKaFa']
+
+    main_df = main_df.drop(['Join_ArtikelId', 'SGVSB-Nr.'], axis=1)
+
+    print("Writing file...")
+    main_df.to_csv(left_and_path, index=False, sep=';',
+                   encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
 
 
-currentpath = os.getcwd()
+if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(
+        description='Example with long option names')
+    parser.add_argument('--left', default="Price-Comparison.csv",
+                        dest="left",
+        help="Lefthand File", type=str)
+    parser.add_argument('--right',
+                        default="Artikel_KorrLauf.xlsx", dest="right",
+        help="Righthand File", type=str)
 
+    args = parser.parse_args()
 
-main_df = am.csv_to_pandas(os.path.join(currentpath,"2017-11-06_Price-Comparison.csv"))
+    left = args.left
+    right = args.right
+
+    main(left, right)

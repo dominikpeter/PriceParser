@@ -65,11 +65,12 @@ def modify_dataframe(df, idHersteller_Columns = ['FarbId',
     fill_cols = ['ArtikelId','FarbId',
                  'AusführungsId','Art_Nr_Hersteller',
                  'Art_Nr_Hersteller_Firma']
-
     df[fill_cols] = df[fill_cols].fillna('').astype(str)
+
     df['FarbId'] = df['FarbId'].replace('', '000').fillna('000')
     df['UniqueId'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
                             lambda x: ''.join(x), axis=1)
+
     check_id = df['Art_Nr_Hersteller'].apply(lambda x: len(x) > 3)
 
     df.loc[check_id,
@@ -79,11 +80,11 @@ def modify_dataframe(df, idHersteller_Columns = ['FarbId',
                                         axis=1)
 
     df['idHersteller'] = df['idHersteller'].replace(
-                                        '', np.nan).replace(
-                                                        '\s', np.nan)
+                                                '', np.nan).replace(
+                                                                '\s', np.nan)
 
-    df['idHersteller'] = df['idHersteller']
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
+
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
 
     return clean_text(df)
@@ -443,7 +444,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='Example with long option names')
-    parser.add_argument('--settings', default="Sanitär", dest="settings",
+    parser.add_argument('--settings', default="Sanitary", dest="settings",
         help="Name of Setting", type=str)
 
     currentpath = os.getcwd()

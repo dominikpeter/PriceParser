@@ -1,5 +1,5 @@
 {
-  "Sanitär": {
+  "Sanitary": {
     "Main File": "Richner",
     "Max Text Distance": 0.4,
     "Max Price Difference": 0.5,
@@ -9,35 +9,35 @@
       "CSV": true,
       "Excel": false,
       "Timetag": true,
-      "Name": "Price-Comparison"
+      "Name": "Price-Comparison-Sanitary"
     },
     "Companies": {
       "Sanitas": {
-        "SGVSB": false,
+        "UniqueId": false,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "Sabag": {
-        "SGVSB": true,
+        "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "Saneo": {
-        "SGVSB": true,
+        "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "TeamSaniDusch": {
-        "SGVSB": true,
+        "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "TeamHug": {
-        "SGVSB": true,
+        "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
@@ -45,13 +45,14 @@
     },
     "SQL": {
       "Server": "CRHBUSADWH02",
-      "Sales Query Path": "",
-      "Meta": "Select * from meta"
+      "Meta": "Meta.sql",
+      "Sales": "Sales.sql",
+      "Join": "UniqueId"
     }
   },
-  "Haustechnik": {
-    "Main File": "HT_Meta.sql",
-    "Max Text Distance": 0.4,
+  "Pluming": {
+    "Main File": "HT_Main_DF.sql",
+    "Max Text Distance": 0.3,
     "Max Price Difference": 0.5,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
@@ -59,23 +60,101 @@
       "CSV": true,
       "Excel": false,
       "Timetag": true,
-      "Name": "Price-Comparison"
+      "Name": "Price-Comparison-Plumping"
     },
     "Companies": {
       "SpaeterHT": {
-        "SGVSB": false,
+        "UniqueId": false,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "Tobler": {
-        "SGVSB": true,
+        "UniqueId": false,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
       },
       "DebrunnerAciferTB": {
-        "SGVSB": true,
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Engel": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Gabs": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Briner": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "ArthurWeber": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "DebrunnerWG": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "ISOCENTER": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "WalterMeier": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "SpaeterHT": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "SpaeterHZ": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "SpaeterWE": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Pestalozzi": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Nussbaum": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "SchwarzStahl": {
+        "UniqueId": false,
         "EAN": true,
         "idHersteller": true,
         "Text Similarity": true
@@ -83,8 +162,9 @@
     },
     "SQL": {
       "Server": "CRHBUSADWH02",
-      "Sales Query Path": "",
-      "Meta": "Select * from meta"
+      "Meta": "MetaHT.sql",
+      "Sales": "SalesHT.sql",
+      "Join": "ArtikelId"
     }
   }
 }
