@@ -5,6 +5,7 @@
     "Max Price Difference": 0.8,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
+    "Join on Supplier": true,
     "Export": {
       "CSV": true,
       "Excel": false,
@@ -32,6 +33,7 @@
     "Max Price Difference": 0.5,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
+    "Join on Supplier": false,
     "Export": {
       "CSV": true,
       "Excel": false,

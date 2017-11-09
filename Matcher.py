@@ -54,7 +54,7 @@ def check_distance(x, threshold=0.5):
     return list_to_return
 
 
-def modify_dataframe(df):
+def modify_dataframe(df, join_supplier=True):
     df = df.fillna('')
     df['Farbe'] = df['AF_Txt']
     df['Ausführung'] = df['AFZ_Txt']
@@ -70,10 +70,20 @@ def modify_dataframe(df):
         lambda x: ''.join(x), axis=1)
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
-    df.loc[check_id, 'idHersteller'] = df.loc[check_id, ['FarbId',
-                                                         'AusführungsId',
-                                                         'Art_Nr_Hersteller',
-                                                         'Art_Nr_Hersteller_Firma']].apply(lambda x: ''.join(x), axis=1)
+    if join_supplier:
+        idHersteller_Columns = ['FarbId',
+                                'AusführungsId',
+                                'Art_Nr_Hersteller',
+                                'Art_Nr_Hersteller_Firma']
+    else:
+        idHersteller_Columns = ['FarbId',
+                                'AusführungsId',
+                                'Art_Nr_Hersteller']
+
+    df.loc[check_id, 'idHersteller'] = df.loc[check_id,
+                                              idHersteller_Columns
+                                              ].apply(
+                                                  lambda x: ''.join(x), axis=1)
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
@@ -228,16 +238,17 @@ def join_on_string_distance(df_l, df_r,
 
 def prepare_data(join_df_path, key, main_df,
                  settings, threshold, distance,
-                 n_jobs=0, chunksize=2000):
+                 n_jobs=0, chunksize=2000,
+                 join_supplier=True):
     join_df = pp.csv_to_pandas(join_df_path)
-    join_df = modify_dataframe(join_df)
-    main_df = modify_dataframe(main_df)
-    main_df = join_on_id(main_df, join_df, key, 'UniqueId',
-                         settings['Companies'], threshold=threshold)
-    main_df = join_on_id(main_df, join_df, key, 'EAN',
-                         settings['Companies'], threshold=threshold)
-    main_df = join_on_id(main_df, join_df, key, 'idHersteller',
-                         settings['Companies'], threshold=threshold)
+    join_df = modify_dataframe(join_df, join_supplier=join_supplier)
+    main_df = modify_dataframe(main_df, join_supplier=join_supplier)
+
+    for i in ["UniqueId", "EAN", "idHersteller"]:
+        main_df = join_on_id(main_df, join_df, key, i,
+                             settings['Companies'],
+                             threshold=threshold)
+
     main_df = join_on_string_distance(
         main_df, join_df, key, settings['Companies'],
         threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
@@ -312,6 +323,7 @@ def main(settings):
     export_name = settings['Export']['Name']
     timetag_bool = settings['Export']['Timetag']
     join_sql_on = settings['SQL']['Join']
+    join_supplier = settings['Join on Supplier']
 
     timetag = None
 
