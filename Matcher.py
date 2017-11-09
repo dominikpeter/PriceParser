@@ -61,7 +61,8 @@ def modify_dataframe(df, join_supplier=True):
                    'FarbId',
                    'AusführungsId',
                    'Art_Nr_Hersteller']
-    df[str_columns] = df[str_columns].astype(str)
+
+    df[str_columns] = df[str_columns].fillna('').astype(str)
 
     object_columns = df.select_dtypes('object').columns
     df.loc[:,object_columns] = df.loc[:,object_columns].fillna('')
