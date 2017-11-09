@@ -253,19 +253,19 @@ def prepare_data(join_df_path, key, main_df,
     return main_df
 
 
-def join_meta_data(main_df, path, sales=True, meta=True):
+def join_meta_data(main_df, path, on, sales=True, meta=True):
     con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
     if sales:
         print('Getting Sales Data from Database...')
         sales_query = pp.load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
         sales = pp.sql_to_pandas(con, sales_query)
-        main_df = main_df.merge(sales, how='left', on='UniqueId',  suffixes=('', '_y'))
+        main_df = main_df.merge(sales, how='left', on=on,  suffixes=('', '_y'))
 
     if meta:
         print('Getting Meta Data from Database...')
         meta_query = pp.load_sql_text(os.path.join(path,"SQL", 'Meta.sql'))
         meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
-        main_df = main_df.merge(meta, how='left', on='UniqueId',  suffixes=('', '_y'))
+        main_df = main_df.merge(meta, how='left', on=on,  suffixes=('', '_y'))
 
     return main_df
 
@@ -311,6 +311,7 @@ def main(settings):
     excel_export = settings['Export']['Excel']
     export_name = settings['Export']['Name']
     timetag_bool = settings['Export']['Timetag']
+    join_sql_on = settings['SQL']['Join']
 
     timetag = None
 
@@ -340,7 +341,7 @@ def main(settings):
                         chunksize=chunksize)
     try:
         main_df = join_meta_data(
-            main_df, path=currentpath, sales=True, meta=True)
+            main_df, path=currentpath, on=join_sql_on, sales=True, meta=True)
     except turbodbc.Error:
         print('Cannot connect to Database')
 
