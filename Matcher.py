@@ -18,22 +18,7 @@ import turbodbc
 import PriceParser as pp
 
 
-def load_json(path):
-
-    with open(path) as j:
-        data = json.load(j)
-    return data
-
-
-def load_sql_text(path):
-
-    with codecs.open(path, encoding='utf-8') as sql:
-        file = sql.read()
-    return file
-
-
 def add_columns(df, key):
-
     colname_preis = 'Preis_{}'.format(key)
     colname_text = 'Txt_Lang_{}'.format(key)
     colname_join = 'Joined_{}_on'.format(key)
@@ -51,30 +36,7 @@ def add_columns(df, key):
     return df
 
 
-def create_connection_string_turbo(server, database):
-
-    options = turbodbc.make_options(prefer_unicode=True)
-    constr = 'Driver={ODBC Driver 13 for SQL Server};Server=' + \
-        server + ';Database=' + database + ';Trusted_Connection=yes;'
-    con = turbodbc.connect(connection_string=constr, turbodbc_options=options)
-
-    return con
-
-
-def sql_to_pandas(connection, query, *args, **kwargs):
-
-    df = pd.read_sql(query, connection, *args, **kwargs)
-
-    return df
-
-
-def csv_to_pandas(csv_filepath, *args, **kwargs):
-
-    return pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
-
-
 def check_distance(x, threshold=0.5):
-
     if len(x) < 2:
         return x
     list_ = x[0]
@@ -93,11 +55,11 @@ def check_distance(x, threshold=0.5):
 
 
 def modify_dataframe(df):
-
     df = df.fillna('')
     df['Farbe'] = df['AF_Txt']
     df['Ausführung'] = df['AFZ_Txt']
-    df[['ArtikelId', 'FarbId',
+    df[['ArtikelId',
+        'FarbId',
         'AusführungsId',
         'Art_Nr_Hersteller']] = df[['ArtikelId',
                                     'FarbId',
@@ -127,39 +89,9 @@ def clean_text(df, pattern='\t|\n|\r'):
     return df
 
 
-def batch(iterable, n=1):
-
-    from scipy import sparse
-    if sparse.issparse(iterable) or isinstance(
-                                            iterable,
-                                            (np.ndarray, np.generic)):
-        row_l = iterable.shape[0]
-        for ndx in range(0, row_l, n):
-            yield iterable[ndx:min(ndx + n, row_l), ]
-
-
-def check_input_string_boolean(x):
-
-    if x.lower() in ('yes', 'ja', 'y', 'j', 'true'):
-        return True
-    if x.lower() in ('no', 'nein', 'n', 'false'):
-        return False
-    return False
-
-
-def check_settings(json, key, on):
-    c = True
-    try:
-        c = json[key][on]
-    except KeyError:
-        print('Key not found \n')
-    return c
-
-
 def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
-
     df_r_ = df_r.copy()
-    if check_settings(settings, key, on):
+    if pp.check_settings(settings, key, on):
         print('Joining Data on {}{}'.format(on, "\t"*8), end='\n')
         try:
             lon, ron = on
@@ -209,7 +141,6 @@ def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
 
 
 def replace_column_after_join(df, colname_preis, colname_text, key, on):
-
     df['Joined_on_y'] = on
     df[colname_preis] = np.where(
         pd.isnull(df[colname_preis]), df['Preis_y'], df[colname_preis])
@@ -224,15 +155,13 @@ def replace_column_after_join(df, colname_preis, colname_text, key, on):
     return df
 
 
-def join_on_string_distance(
-        df_l, df_r,
-        key, settings, chunksize=5000,
-        threshold=0.5, n_jobs=1, method='cosine',
-        columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
-
+def join_on_string_distance(df_l, df_r,
+                            key, settings, chunksize=5000,
+                            threshold=0.5, n_jobs=1, method='cosine',
+                            columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
     df_r_ = df_r.copy()
     on = 'Text Similarity'
-    if check_settings(settings, key, on):
+    if pp.check_settings(settings, key, on):
         print('Joining Data on {}\n'.format(on))
         df_l = add_columns(df_l, key)
         n_jobs = max(1, n_jobs)
@@ -259,7 +188,7 @@ def join_on_string_distance(
 
         arr = np.empty((X.shape[0], 2))
 
-        for i, a in tqdm.tqdm(zip(batch(X, chunksize), batch(arr, chunksize))):
+        for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize), pp.batch(arr, chunksize))):
             distance = pairwise_distances(i, Y, metric='cosine', n_jobs=n_jobs)
             distance_min = distance.min(axis=1)
             distance_argmin = distance.argmin(axis=1)
@@ -298,10 +227,9 @@ def join_on_string_distance(
 
 
 def prepare_data(join_df_path, key, main_df,
-        settings, threshold, distance,
-        n_jobs=0, chunksize=2000):
-
-    join_df = csv_to_pandas(join_df_path)
+                 settings, threshold, distance,
+                 n_jobs=0, chunksize=2000):
+    join_df = pp.csv_to_pandas(join_df_path)
     join_df = modify_dataframe(join_df)
     main_df = modify_dataframe(main_df)
     main_df = join_on_id(main_df, join_df, key, 'UniqueId',
@@ -326,31 +254,30 @@ def prepare_data(join_df_path, key, main_df,
 
 
 def join_meta_data(main_df, path, sales=True, meta=True):
-    con = create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
+    con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
     if sales:
         print('Getting Sales Data from Database...')
-        sales_query = load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
-        sales = sql_to_pandas(con, sales_query)
+        sales_query = pp.load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
+        sales = pp.sql_to_pandas(con, sales_query)
         main_df = main_df.merge(sales, how='left', on='UniqueId',  suffixes=('', '_y'))
 
     if meta:
         print('Getting Meta Data from Database...')
-        meta_query = load_sql_text(os.path.join(path,"SQL", 'Meta.sql'))
-        meta = sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
+        meta_query = pp.load_sql_text(os.path.join(path,"SQL", 'Meta.sql'))
+        meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(meta, how='left', on='UniqueId',  suffixes=('', '_y'))
 
     return main_df
 
 
 def export_pandas(main_df, path,
-    name='Price-Comparison',
-    to_csv=True, to_excel=True,
-    index=False, timetag=None):
-
+                  name='Price-Comparison',
+                  to_csv=True, to_excel=True,
+                  index=False, timetag=None):
     if timetag:
-        filename = os.path.join(path, timetag+'_'+name)
+        filename = os.path.join(path,"Matching", timetag+'_'+name)
     else:
-        filename = os.path.join(path, name)
+        filename = os.path.join(path,"Matching", name)
     try:
         if to_csv:
             filename = filename + '.csv'
@@ -369,7 +296,6 @@ def export_pandas(main_df, path,
 
 
 def main(settings):
-
     currentpath = os.getcwd()
 
     files = [i for i in glob.iglob(os.path.join(
@@ -403,7 +329,7 @@ def main(settings):
         i)[-1].split('-')[0]: j for i, j in zip(
         files_to_match, files_to_match)}
 
-    main_df = csv_to_pandas(main_file[0])
+    main_df = pp.csv_to_pandas(main_file[0])
 
     for i in files_to_match:
         print('\nMatching Data from {}\n{}\n'.format(i, '#'*80))
@@ -424,7 +350,6 @@ def main(settings):
 
 # -------------------------------------------------------------------------------------
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         description='Example with long option names')
     parser.add_argument('--settings', default="Sanitary", dest="settings",

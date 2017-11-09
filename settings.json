@@ -16,7 +16,7 @@
         "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
-        "Text Similarity": false
+        "Text Similarity": true
       }
     },
     "SQL": {
