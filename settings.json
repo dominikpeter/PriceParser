@@ -14,6 +14,30 @@
     },
     "Companies": {
       "Sanitas": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Sabag": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Saneo": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamSaniDusch": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamHug": {
         "UniqueId": true,
         "EAN": true,
         "idHersteller": true,

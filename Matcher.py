@@ -75,15 +75,19 @@ def modify_dataframe(df, join_supplier=True):
                                 'AusführungsId',
                                 'Art_Nr_Hersteller',
                                 'Art_Nr_Hersteller_Firma']
+        df.loc[check_id, 'idHersteller'] = df.loc[check_id,
+                                                  idHersteller_Columns
+                                                  ].apply(
+                                                      lambda x: ''.join(x),
+                                                      axis=1)
     else:
-        idHersteller_Columns = ['FarbId',
-                                'AusführungsId',
-                                'Art_Nr_Hersteller']
+        idHersteller_Columns = ['Art_Nr_Hersteller']
+        unique_id_ix = df[df.groupby(
+                        'Art_Nr_Hersteller')[
+                            'Art_Nr_Hersteller'].cumcount() == 0].index
+        check_id = check_id.intersection(unique_id_ix)
+        df.loc[check_id, 'idHersteller'] = df[idHersteller_Columns]
 
-    df.loc[check_id, 'idHersteller'] = df.loc[check_id,
-                                              idHersteller_Columns
-                                              ].apply(
-                                                  lambda x: ''.join(x), axis=1)
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
@@ -264,15 +268,15 @@ def prepare_data(join_df_path, key, main_df,
     return main_df
 
 
-def join_meta_data(main_df, path, on, sales=True, meta=True):
+def join_meta_data(main_df, path, on, sales_query=None, meta_query=None):
     con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
-    if sales:
+    if sales_query:
         print('Getting Sales Data from Database...')
         sales_query = pp.load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
         sales = pp.sql_to_pandas(con, sales_query)
         main_df = main_df.merge(sales, how='left', on=on,  suffixes=('', '_y'))
 
-    if meta:
+    if meta_query:
         print('Getting Meta Data from Database...')
         meta_query = pp.load_sql_text(os.path.join(path,"SQL", 'Meta.sql'))
         meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
@@ -323,6 +327,8 @@ def main(settings):
     export_name = settings['Export']['Name']
     timetag_bool = settings['Export']['Timetag']
     join_sql_on = settings['SQL']['Join']
+    sales_query = settings['SQL']['Sales']
+    meta_query = settings['SQL']['Meta']
     join_supplier = settings['Join on Supplier']
 
     timetag = None
@@ -331,8 +337,15 @@ def main(settings):
         now = datetime.datetime.now()
         timetag = now.strftime('%Y-%m-%d')
 
-    main_file = [f for f in files if re.match(
-        r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]
+    if re.match('.+\.sql', main_file_pattern):
+        con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
+        query = pp.load_sql_text(os.path.join(currentpath,
+                                               "SQL", main_file_pattern))
+        main_df = pp.sql_to_pandas(con, query)
+    else:
+        main_file = [f for f in files if re.match(
+            r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]
+        main_df = pp.csv_to_pandas(main_file[0])
 
     companies_to_compare = [i for i in settings['Companies']]
     compiler = re.compile(
@@ -342,8 +355,6 @@ def main(settings):
         i)[-1].split('-')[0]: j for i, j in zip(
         files_to_match, files_to_match)}
 
-    main_df = pp.csv_to_pandas(main_file[0])
-
     for i in files_to_match:
         print('\nMatching Data from {}\n{}\n'.format(i, '#'*80))
         main_df = prepare_data(
@@ -352,8 +363,11 @@ def main(settings):
                         distance=text_distance, n_jobs=parallel,
                         chunksize=chunksize)
     try:
-        main_df = join_meta_data(
-            main_df, path=currentpath, on=join_sql_on, sales=True, meta=True)
+        main_df = join_meta_data(main_df,
+                                 path=currentpath,
+                                 on=join_sql_on,
+                                 sales_query=sales_query,
+                                 meta_query=meta_query)
     except turbodbc.Error:
         print('Cannot connect to Database')
 
