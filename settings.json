@@ -2,7 +2,7 @@
   "Sanitary": {
     "Main File": "Richner",
     "Max Text Distance": 0.4,
-    "Max Price Difference": 0.8,
+    "Max Price Difference": 0.6,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
     "Join on Supplier": true,

@@ -38,7 +38,9 @@ def main(left, right):
 
     main_df['Preisfaktor'] = main_df['02\nRichner\nSoKaFa']
 
-    main_df = main_df.drop(['Join_ArtikelId', 'SGVSB-Nr.'], axis=1)
+    main_df = main_df.drop(['Join_ArtikelId',
+                            'SGVSB-Nr.',
+                            '02\nRichner\nSoKaFa'], axis=1)
 
     print("Writing file...")
     main_df.to_csv(left_and_path, index=False, sep=';',
