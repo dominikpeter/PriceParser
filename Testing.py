@@ -1,17 +1,13 @@
 
+
 import pandas as pd
 import numpy as np
 import json
 import os
 
-p = pd.DataFrame({'A': [1,2,3,4,5]})
-
-c = os.getcwd()
-
-with open(os.path.join(c, 'settings.json')) as j:
-    data = json.load(j)
+p = pd.DataFrame({'A': [1,2,3,4,4,4,5,2,3,5,9,6,2,1,23, 23, 23 ,  23]})
 
 
-p.iloc[2,:] = np.nan
+p['Count'] =  p.groupby('A')['A'].transform(lambda x: len(x))
 
-p2 = p.loc[p['A']>2,:]
+p[p.groupby('A')['A'].cumcount() == 0]

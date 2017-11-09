@@ -2,7 +2,7 @@
   "Sanitary": {
     "Main File": "Richner",
     "Max Text Distance": 0.4,
-    "Max Price Difference": 0.8,
+    "Max Price Difference": 0.5,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
     "Export": {
@@ -13,10 +13,34 @@
     },
     "Companies": {
       "Sanitas": {
+        "UniqueId": false,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Sabag": {
         "UniqueId": true,
         "EAN": true,
         "idHersteller": true,
-        "Text Similarity": false
+        "Text Similarity": true
+      },
+      "Saneo": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamSaniDusch": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamHug": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
       }
     },
     "SQL": {
