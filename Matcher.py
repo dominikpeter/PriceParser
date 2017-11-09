@@ -70,6 +70,7 @@ def modify_dataframe(df, join_supplier=True):
         lambda x: ''.join(x), axis=1)
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
+
     if join_supplier:
         idHersteller_Columns = ['FarbId',
                                 'AusführungsId',
@@ -82,11 +83,13 @@ def modify_dataframe(df, join_supplier=True):
                                                       axis=1)
     else:
         idHersteller_Columns = ['Art_Nr_Hersteller']
-        unique_id_ix = df[df.groupby(
-                        'Art_Nr_Hersteller')[
-                            'Art_Nr_Hersteller'].cumcount() == 0].index
-        check_id = check_id.intersection(unique_id_ix)
-        df.loc[check_id, 'idHersteller'] = df[idHersteller_Columns]
+        df['idHersteller'] = df[idHersteller_Columns]
+        df.loc[~check_id, 'idHersteller'] = np.nan
+        check_double = df.groupby(
+                        'idHersteller')['idHersteller'].cumcount().values > 0
+        df.loc[check_double, 'idHersteller'] = np.nan
+
+    df['idHersteller'] = df['idHersteller'].replace('[^0-9a-zA-Z]+', '')
 
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
@@ -272,13 +275,13 @@ def join_meta_data(main_df, path, on, sales_query=None, meta_query=None):
     con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
     if sales_query:
         print('Getting Sales Data from Database...')
-        sales_query = pp.load_sql_text(os.path.join(path,"SQL", 'Sales.sql'))
+        sales_query = pp.load_sql_text(os.path.join(path,"SQL", sales_query))
         sales = pp.sql_to_pandas(con, sales_query)
         main_df = main_df.merge(sales, how='left', on=on,  suffixes=('', '_y'))
 
     if meta_query:
         print('Getting Meta Data from Database...')
-        meta_query = pp.load_sql_text(os.path.join(path,"SQL", 'Meta.sql'))
+        meta_query = pp.load_sql_text(os.path.join(path,"SQL", meta_query))
         meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(meta, how='left', on=on,  suffixes=('', '_y'))
 
@@ -361,7 +364,8 @@ def main(settings):
                         files_to_match[i], i, main_df,
                         settings, threshold=price_threshold,
                         distance=text_distance, n_jobs=parallel,
-                        chunksize=chunksize)
+                        chunksize=chunksize,
+                        join_supplier=join_supplier)
     try:
         main_df = join_meta_data(main_df,
                                  path=currentpath,
