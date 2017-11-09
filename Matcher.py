@@ -55,19 +55,21 @@ def check_distance(x, threshold=0.5):
 
 
 def modify_dataframe(df, join_supplier=True):
-    df = df.fillna('')
     df['Farbe'] = df['AF_Txt']
     df['Ausführung'] = df['AFZ_Txt']
-    df[['ArtikelId',
-        'FarbId',
-        'AusführungsId',
-        'Art_Nr_Hersteller']] = df[['ArtikelId',
-                                    'FarbId',
-                                    'AusführungsId',
-                                    'Art_Nr_Hersteller']].astype(str)
+    str_columns = ['ArtikelId',
+                   'FarbId',
+                   'AusführungsId',
+                   'Art_Nr_Hersteller']
+    df[str_columns] = df[str_columns].astype(str)
+
+    object_columns = df.select_dtypes('object').columns
+    df.loc[:,object_columns] = df.loc[:,object_columns].fillna('')
+
     df['FarbId'] = df['FarbId'].replace('', '000')
     df['UniqueId'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
         lambda x: ''.join(x), axis=1)
+
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
 
@@ -93,6 +95,7 @@ def modify_dataframe(df, join_supplier=True):
 
     df['idHersteller'] = df['idHersteller'].replace('\s', '')
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
+
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
 
     return clean_text(df)
