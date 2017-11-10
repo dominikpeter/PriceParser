@@ -49,6 +49,11 @@
       "Meta": "Meta.sql",
       "Sales": "Sales.sql",
       "Join": "UniqueId"
+    },
+    "Analysis":{
+    "Sales Percentile": 0.75,
+    "Quantity Percentile": 0.75,
+    "Object Percentile": 0.75
     }
   },
   "Plumping": {

@@ -42,6 +42,8 @@ def main(left, right):
                             'SGVSB-Nr.',
                             '02\nRichner\nSoKaFa'], axis=1)
 
+    main_df = main_df.drop_duplicates()
+
     print("Writing file...")
     main_df.to_csv(left_and_path, index=False, sep=';',
                    encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)

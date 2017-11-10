@@ -55,6 +55,7 @@ def check_distance(x, threshold=0.5):
 
 
 def modify_dataframe(df, join_supplier=True):
+    df = df.drop_duplicates()
     df['Farbe'] = df['AF_Txt']
     df['Ausführung'] = df['AFZ_Txt']
     str_columns = ['ArtikelId',
@@ -296,6 +297,9 @@ def export_pandas(main_df, path,
                   name='Price-Comparison',
                   to_csv=True, to_excel=True,
                   index=False, timetag=None):
+
+    main_df = main_df.drop_duplicates()
+
     if timetag:
         filename = os.path.join(path,"Matching", timetag+'_'+name)
     else:
