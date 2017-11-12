@@ -16,16 +16,11 @@ import PriceParser as pp
 
 def main(left, right):
 
-    currentpath = os.getcwd()
-
-    left_and_path = os.path.join(currentpath,"Matching", left)
-    right_and_path = os.path.join(currentpath, "Files", right)
-
     print("Loading lefthandside...")
-    main_df = pp.csv_to_pandas(left_and_path)
+    main_df = pp.csv_to_pandas(left)
 
     print("Loading righthandside...")
-    join_df = pd.read_excel(right_and_path)
+    join_df = pd.read_excel(right)
 
     main_df['Join_ArtikelId'] = main_df["ArtikelId"].astype(int)
 
@@ -45,7 +40,7 @@ def main(left, right):
     main_df = main_df.drop_duplicates()
 
     print("Writing file...")
-    main_df.to_csv(left_and_path, index=False, sep=';',
+    main_df.to_csv(left, index=False, sep=';',
                    encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
 
 

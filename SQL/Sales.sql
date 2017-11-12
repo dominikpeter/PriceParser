@@ -1,13 +1,13 @@
 
 SELECT UniqueId
+  ,GrossSales_LTM = sum(GrossSales)
   ,Sales_LTM = sum(Sales)
   ,Margin_LTM = sum(Margin)
   ,Quantity_LTM = sum(Quantity)
   ,ObjectRate = max(ObjectRate)
-
 FROM (
-
 SELECT UniqueId = idItemOld
+  ,GrossSales = sum(GrossSales)
   ,Sales = sum(Sales)
   ,Margin = sum(Margin)
   ,Quantity = sum(Quantity)
@@ -23,6 +23,7 @@ group by idItemOld
 UNION ALL
 
 SELECT UniqueId = substring(i.iditemorigin, 2, 500)
+  ,GrossSales = sum(GrossSales)
   ,Sales = sum(Sales)
   ,Margin = sum(Margin)
   ,Quantity = sum(Quantity)
@@ -33,6 +34,5 @@ where itemgroupgrouphierarchyname_l1 = '05-Sanitär'
 and Date > dateadd(month, -12, getdate())
 and Sales > 0
 group by substring(i.iditemorigin, 2, 500)
-
 ) x
 GROUP BY UniqueId
