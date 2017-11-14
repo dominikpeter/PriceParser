@@ -13,6 +13,8 @@ import multiprocessing
 import os
 import re
 from functools import partial
+import datetime
+
 
 import numpy as np
 import pandas as pd
@@ -377,8 +379,9 @@ class XML_Parser:
                 self.DF.to_csv(path_to_save, index=False,
                                sep=';', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
                 if archiv_:
+                    now = datetime.datetime.now().strftime('%Y-%d-%m')
                     path_to_save = os.path.join(
-                        path, 'Archiv', filename + csv_ext)
+                        path, 'Archiv', now, filename + csv_ext)
                     self.DF.to_csv(path_to_save, index=False,
                                    sep=';', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
             if excel_:
