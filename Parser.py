@@ -379,7 +379,7 @@ class XML_Parser:
                 self.DF.to_csv(path_to_save, index=False,
                                sep=';', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
                 if archiv_:
-                    now = datetime.datetime.now().strftime('%Y-%d-%m')
+                    now = datetime.datetime.now().strftime('%Y-%m-%d')
                     path_to_save = os.path.join(
                         path, 'Archiv', now, filename + csv_ext)
                     self.DF.to_csv(path_to_save, index=False,
@@ -434,7 +434,8 @@ if __name__ == "__main__":
     csv_arg = pp.check_input_string_boolean(args.csv_arg)
 
     if archiv:
-        pp.create_folder(currentpath, "Archiv")
+        now = datetime.datetime.now().strftime('%Y-%m-%d')
+        pp.create_folder(currentpath, os.path.join("Archiv", now))
     if excel_arg:
         pp.create_folder(currentpath, "Excel")
     if csv_arg:
