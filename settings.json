@@ -50,10 +50,10 @@
       "Sales": "Sales.sql",
       "Join": "UniqueId"
     },
-    "Analysis":{
-    "Sales Percentile": 0.75,
-    "Quantity Percentile": 0.75,
-    "Object Percentile": 0.75
+    "Analysis": {
+      "Sales Percentile": 0.75,
+      "Quantity Percentile": 0.75,
+      "Object Percentile": 0.75
     }
   },
   "Plumping": {

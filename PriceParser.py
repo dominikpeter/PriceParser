@@ -17,6 +17,14 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import pairwise_distances
 
 
+class Currenpath:
+    Path = os.path.join("\\\\CRHBUSADCS01",
+                         "Data","PublicCitrix",
+                         "084_Bern_Laupenstrasse",
+                         "CM", "Analysen",
+                         "Pricing", "IGH Price Parser")
+
+
 def create_folder(path, folder):
     """Folder Creator
     Create Folder if it doesn't exist
@@ -28,7 +36,7 @@ def create_folder(path, folder):
 
 def load_json(path):
     with codecs.open(path, encoding='utf-8') as j:
-        data = json.load(j, )
+        data = json.load(j)
 
     return data
 

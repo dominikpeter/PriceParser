@@ -7,6 +7,7 @@ import os
 import random
 import PriceParser as pp
 
+path = pp.Folderpath.Path
 
 def highlight_max(s):
     '''

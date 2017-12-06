@@ -180,7 +180,8 @@ def replace_column_after_join(df, colname_preis, colname_text, key, on):
 def join_on_string_distance(df_l, df_r,
                             key, settings, chunksize=5000,
                             threshold=0.5, n_jobs=1, method='cosine',
-                            columns=['Art_Txt_Lang', 'Art_Txt_Kurz']):
+                            columns=['Art_Txt_Lang', 'Art_Txt_Kurz',
+                                     'Farbe', 'Ausführung']):
     df_r_ = df_r.copy()
     on = 'Text Similarity'
     if pp.check_settings(settings, key, on):
@@ -321,8 +322,7 @@ def export_pandas(main_df, path,
         print('Permission was denied when writing to Excel\n')
 
 
-def main(settings):
-    currentpath = os.getcwd()
+def main(settings, currentpath):
 
     files = [i for i in glob.iglob(os.path.join(
         currentpath) + '/Output/*.csv', recursive=True)]
@@ -394,20 +394,21 @@ if __name__ == "__main__":
     parser.add_argument('--settings', default="Sanitary", dest="settings",
         help="Name of Setting", type=str)
 
-    currentpath = os.getcwd()
-
-    for i in ['Matching', 'SQL', 'Files']:
-        pp.create_folder(currentpath, i)
+    currentpath  = pp.Currenpath.Path
 
     args = parser.parse_args()
     setting_to_apply = args.settings
 
     settings = pp.load_json(os.path.join(currentpath, 'settings.json'))
+
     settings = settings[setting_to_apply]
+
+    for i in ['Matching', 'SQL', 'Files']:
+        pp.create_folder(currentpath, i)
 
     print(
         "{}{}{}Article Matching for Price Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(
                 "\n"*2, "#"*80, "\n"*2, "\n"*2, "#"*80, "\n"*2))
 
 
-    main(settings)
+    main(settings, currentpath)

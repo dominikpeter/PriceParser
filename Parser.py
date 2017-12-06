@@ -417,7 +417,7 @@ if __name__ == "__main__":
                         help="Generate Excel Files", type=str)
 
 
-    currentpath = os.getcwd()
+    currentpath = pp.Currenpath.Path
 
     args = parser.parse_args()
 

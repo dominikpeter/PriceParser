@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import zipfile
 from functools import partial
+import PriceParser as pp
 
 import requests
 from lxml import html
@@ -54,7 +55,7 @@ if __name__ == '__main__':
         "Getting XML Files from {}".format(mainpage),
         "\n\n""==========================================================\n\n\n")
 
-    currentpath = os.getcwd()
+    currentpath = pp.Currenpath.Path
 
     args = parser.parse_args()
     n_jobs = args.n_jobs
