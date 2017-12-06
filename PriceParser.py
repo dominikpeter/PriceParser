@@ -16,14 +16,14 @@ import turbodbc
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import pairwise_distances
 
-
-class Currenpath:
-    Path = os.path.join("\\\\CRHBUSADCS01",
-                         "Data","PublicCitrix",
-                         "084_Bern_Laupenstrasse",
-                         "CM", "Analysen",
-                         "Pricing", "IGH Price Parser")
-
+Path = os.path.join("\\\\CRHBUSADCS01",
+                    "Data",
+                    "PublicCitrix",
+                    "084_Bern_Laupenstrasse",
+                    "CM",
+                    "Analysen",
+                    "Pricing",
+                    "IGH Price Parser")
 
 def create_folder(path, folder):
     """Folder Creator
@@ -103,3 +103,26 @@ def rec_dd():
     Recursive Defaultdict
     """
     return collections.defaultdict(rec_dd)
+
+
+def search_filetype_in_dict(path, filetype):
+    files = [i for i in glob.iglob(path + '/**/*.{}'.format(filetype),
+        recursive=True)]
+    return files
+
+
+def get_xmls(path, reverse=True):
+    d = {}
+    XMLp = os.path.join(Path, 'XML')
+
+    for i in os.listdir(XMLp):
+        subfolder_path = os.path.join(XMLp, i)
+        files = [os.path.join(subfolder_path, i) for i in os.listdir(subfolder_path)]
+        files.sort(reverse=reverse)
+        d[i] = files
+
+    files = []
+    for i in d:
+        files.append(d[i][0])
+
+    return d, files

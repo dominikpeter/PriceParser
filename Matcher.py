@@ -394,7 +394,7 @@ if __name__ == "__main__":
     parser.add_argument('--settings', default="Sanitary", dest="settings",
         help="Name of Setting", type=str)
 
-    currentpath  = pp.Currenpath.Path
+    currentpath  = pp.Path
 
     args = parser.parse_args()
     setting_to_apply = args.settings

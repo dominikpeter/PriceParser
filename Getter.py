@@ -55,7 +55,7 @@ if __name__ == '__main__':
         "Getting XML Files from {}".format(mainpage),
         "\n\n""==========================================================\n\n\n")
 
-    currentpath = pp.Currenpath.Path
+    currentpath = pp.Path
 
     args = parser.parse_args()
     n_jobs = args.n_jobs

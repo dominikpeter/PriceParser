@@ -15,7 +15,6 @@ import PriceParser as pp
 
 
 def main(left, right):
-
     print("Loading lefthandside...")
     main_df = pp.csv_to_pandas(left)
 
@@ -29,7 +28,9 @@ def main(left, right):
                                      'Preisbasis',
                                      '02\nRichner\nSoKaFa',
                                      'SGVSB-Nr.']],
-                            how="left", left_on="Join_ArtikelId", right_on="SGVSB-Nr.")
+                            how="left",
+                            left_on="Join_ArtikelId",
+                            right_on="SGVSB-Nr.")
 
     main_df['Preisfaktor'] = main_df['02\nRichner\nSoKaFa']
 
