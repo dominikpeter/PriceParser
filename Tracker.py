@@ -69,17 +69,18 @@ def main(currentpath, pattern):
     d = {}
     for i in folders:
         d[i] = search_filetype_in_dict(
-            os.path.join(currenpath, "Archiv", i), "csv")
+            os.path.join(currentpath, "Archiv", i), "csv")
 
     df = gather_data(d, pattern)
 
     path_to_save = os.path.join(currentpath,
         'Tracking', '{}_Price_Tracker.csv'.format(now.strftime("%Y-%m-%d")))
 
+    df['Art_Txt_Lang'] = df['Art_Txt_Lang'].str.replace('\r\n', ' ')
+
     df.to_csv(path_to_save, index=False,
               sep=';', encoding='utf-8',
               quoting=csv.QUOTE_NONNUMERIC)
-
 
 if __name__ == '__main__':
 
@@ -90,8 +91,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     setting_to_apply = args.settings
-
-    currentpath = pp.Variables.Path
+    setting_to_apply = 'Sanitary'
+    currentpath = pp.Path
     # currentpath = os.getcwd()
 
     settings = pp.load_json(os.path.join(currentpath, 'settings.json'))
@@ -99,6 +100,6 @@ if __name__ == '__main__':
 
     pattern = [i for i in settings['Companies']]
 
-    pp.create_folder(currenpath, "Tracking")
+    pp.create_folder(currentpath, "Tracking")
 
     main(currentpath, pattern)
