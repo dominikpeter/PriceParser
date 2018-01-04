@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import csv
 import datetime
+import argparse
 
 
 def search_filetype_in_dict(path, filetype):
@@ -52,6 +53,7 @@ def gather_data(dict_, patterns):
             df['Company'] = str(i)
             df = df.fillna('')
             df_c = pd.concat([df_c, df], axis=0)
+            print("Processing File {}...".format(i))
         except (KeyError, IndexError):
             print("Pattern {} not found...".format(i))
             pass

@@ -187,6 +187,7 @@ class XML_Parser:
                                 'Art_Nr_Synonym_Firma',
                                 'Art_Valid_Von',
                                 'Art_Valid_Bis',
+                                'Art_Txt_Lang',
                                 'Art_Txt_Kurz',
                                 'Art_Menge',
                                 'BM_Einheit_Code']
