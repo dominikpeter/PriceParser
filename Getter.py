@@ -49,10 +49,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Example with long option names')
     parser.add_argument('--n_jobs',default=0, dest="n_jobs", help="Number of Parallel Jobs", type=int)
 
-    mainpage = 'http://www.igh.ch/de/kataloge.html'
-
     print("\n\n\n==========================================================\n\n",
-        "Getting XML Files from {}".format(mainpage),
+        "Getting XML Files from {}".format(pp.Page),
         "\n\n""==========================================================\n\n\n")
 
     currentpath = pp.Path
@@ -60,7 +58,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     n_jobs = args.n_jobs
 
-    r = requests.get(mainpage)
+    r = requests.get(pp.Page)
     html_content = html.fromstring(r.content)
     g = get_download_url(html_content, html_content.base)
 

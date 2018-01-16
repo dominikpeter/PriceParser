@@ -13,8 +13,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 import turbodbc
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import pairwise_distances
+
 
 Path = os.path.join("\\\\CRHBUSADCS01",
                     "Data",
@@ -25,10 +24,10 @@ Path = os.path.join("\\\\CRHBUSADCS01",
                     "Software",
                     "IGH_Price_Parser")
 
+Page = 'http://www.igh.ch/de/kataloge.html'
+
+
 def create_folder(path, folder):
-    """Folder Creator
-    Create Folder if it doesn't exist
-    """
     directory = os.path.join(path, folder)
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -37,14 +36,12 @@ def create_folder(path, folder):
 def load_json(path):
     with codecs.open(path, encoding='utf-8') as j:
         data = json.load(j)
-
     return data
 
 
 def load_sql_text(path):
     with codecs.open(path, encoding='utf-8') as sql:
         file = sql.read()
-
     return file
 
 
@@ -53,13 +50,11 @@ def create_connection_string_turbo(server, database):
     constr = 'Driver={ODBC Driver 13 for SQL Server};Server=' + \
         server + ';Database=' + database + ';Trusted_Connection=yes;'
     con = turbodbc.connect(connection_string=constr, turbodbc_options=options)
-
     return con
 
 
 def sql_to_pandas(connection, query, *args, **kwargs):
     df = pd.read_sql(query, connection, *args, **kwargs)
-
     return df
 
 
@@ -83,7 +78,6 @@ def check_input_string_boolean(x):
         return True
     if x.lower() in ('no', 'nein', 'n', 'false'):
         return False
-
     return False
 
 
@@ -97,7 +91,7 @@ def check_settings(json, key, on):
 
 
 def rec_dd():
-    """ Recursive Defaultdict
+    """
     Recursive Defaultdict
     """
     return collections.defaultdict(rec_dd)
