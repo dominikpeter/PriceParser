@@ -26,3 +26,5 @@ Plots/
 *.csv
 
 *.xlsx
+
+testing.py

@@ -22,8 +22,8 @@ Path = os.path.join("\\\\CRHBUSADCS01",
                     "084_Bern_Laupenstrasse",
                     "CM",
                     "Analysen",
-                    "Pricing",
-                    "IGH Price Parser")
+                    "Software",
+                    "IGH_Price_Parser")
 
 def create_folder(path, folder):
     """Folder Creator
@@ -65,7 +65,6 @@ def sql_to_pandas(connection, query, *args, **kwargs):
 
 def csv_to_pandas(csv_filepath, *args, **kwargs):
     df = pd.read_csv(csv_filepath, sep=";", dtype=str, *args, **kwargs)
-
     return df
 
 
@@ -94,7 +93,6 @@ def check_settings(json, key, on):
         c = json[key][on]
     except KeyError:
         print('Key not found \n')
-
     return c
 
 
@@ -124,5 +122,4 @@ def get_xmls(path, reverse=True):
     files = []
     for i in d:
         files.append(d[i][0])
-
     return d, files

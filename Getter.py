@@ -10,7 +10,7 @@ import requests
 from lxml import html
 from tqdm import tqdm
 
-import PriceParser as pp
+import helper as pp
 
 
 def get_download_url(html_content, baseUrl=""):

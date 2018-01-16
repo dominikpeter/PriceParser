@@ -15,7 +15,7 @@ from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.feature_extraction.text import CountVectorizer
 import turbodbc
 
-import PriceParser as pp
+import helper as pp
 
 
 def add_columns(df, key):

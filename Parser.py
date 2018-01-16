@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 from tqdm import tqdm
-import PriceParser as pp
+import helper as pp
 
 
 def switch_to_right(c):

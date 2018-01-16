@@ -13,7 +13,7 @@ import pandas as pd
 import tqdm
 import turbodbc
 
-import PriceParser as pp
+import helper as pp
 
 
 def load_file(filepath):
