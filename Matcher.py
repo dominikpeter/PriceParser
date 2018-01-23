@@ -18,6 +18,14 @@ import turbodbc
 import helper as pp
 
 
+def save_string_join(x):
+    try:
+        joined = ''.join(x)
+    except TypeError:
+        joined = x
+    return joined
+
+
 def add_columns(df, key):
     colname_preis = 'Preis_{}'.format(key)
     colname_text = 'Txt_Lang_{}'.format(key)
@@ -32,7 +40,6 @@ def add_columns(df, key):
             df[x] = np.nan
     for i in cols:
         check_columns(i)
-
     return df
 
 
@@ -50,7 +57,6 @@ def check_distance(x, threshold=0.5):
             r = np.nan
         list_to_return.append(r)
         i += 1
-
     return list_to_return
 
 
@@ -70,20 +76,24 @@ def modify_dataframe(df, join_supplier=True):
 
     df['FarbId'] = df['FarbId'].replace('', '000')
     df['UniqueId'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
-        lambda x: ''.join(x), axis=1)
+        lambda x: save_string_join(x), axis=1)
 
     check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
 
     if join_supplier:
-        idHersteller_Columns = ['FarbId',
-                                'AusführungsId',
-                                'Art_Nr_Hersteller',
-                                'Art_Nr_Hersteller_Firma']
+        #idHersteller_Columns = ['FarbId',
+        #                        'AusführungsId',
+        #                        'Art_Nr_Hersteller',
+        #                        'Art_Nr_Hersteller_Firma']
+        idHersteller_Columns = ['FarbId','AusführungsId','Art_Nr_Hersteller']
+        #idHersteller_Columns = ['Art_Nr_Hersteller']
+
         df.loc[check_id, 'idHersteller'] = df.loc[check_id,
                                                   idHersteller_Columns
                                                   ].apply(
-                                                      lambda x: ''.join(x),
+                                                      lambda x:
+                                                      save_string_join(x),
                                                       axis=1)
     else:
         idHersteller_Columns = ['Art_Nr_Hersteller']
@@ -99,67 +109,69 @@ def modify_dataframe(df, join_supplier=True):
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
 
     df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
-
     return clean_text(df)
+
 
 
 def clean_text(df, pattern='\t|\n|\r'):
     for i in df.columns:
         if df[i].dtype == 'object':
             df[i] = df[i].str.replace(pattern, ' ')
-
     return df
 
 
 def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
     df_r_ = df_r.copy()
     if pp.check_settings(settings, key, on):
-        print('Joining Data on {}{}'.format(on, "\t"*8), end='\n')
+        print('\nJoining Data on {}{}'.format(on, "\t"*8), end='\n')
         try:
             lon, ron = on
         except ValueError:
             lon, ron = on, on
         colname_preis = 'Preis_{}'.format(key)
         colname_text = 'Txt_Lang_{}'.format(key)
-
         df_l = add_columns(df_l, key)
         df_r_[ron] = df_r_[ron].replace('', np.nan)
         df_l[lon] = df_l[lon].replace('', np.nan)
-
         df_r_[colname_preis] = df_r_['Preis']
         df_r_[colname_text] = df_r_['Art_Txt_Lang']
-
         check_ix = df_r_[pd.isnull(df_r_[ron])].index
         df_r_.drop(check_ix, inplace=True)
-
         df_j = df_l.merge(df_r_, how='left', suffixes=('', '_y'), on=on)
-
         price = df_j['Preis'].astype(float)
         price_y = df_j['{}_y'.format(colname_preis)].astype(float)
-
         check_ix_one = df_j[(abs(price - price_y) / price) > threshold].index
         check_ix_two = df_j[pd.notnull(df_j[colname_preis])].index
         df_j.drop(check_ix_one.union(check_ix_two), inplace=True)
-
         df_j = df_j[[i for i in df_j.columns if re.match('.+_y', i)]]
-
         before_join = df_l[pd.isnull(df_l[colname_preis])].shape[0]
-
         df_l = df_l.join(df_j, how='left', lsuffix='', rsuffix='_y')
         df_l = replace_column_after_join(
             df_l, colname_preis, colname_text, key, on)
-
         after_join = df_l[pd.isnull(df_l[colname_preis])].shape[0]
         diff_join = before_join - after_join
-
         print("Joined {} from {} ({} %)".format(diff_join,
                                     before_join,
                                     round((diff_join / before_join)*100,2)))
-
     else:
         print("Won't join {} on {} due to settings".format(key, on))
-
     return df_l
+
+
+def join_dotdat(df):
+    file_path = os.path.join(pp.Path, "Files", "Dotdat")
+    file_ = sorted(os.listdir(file_path), reverse=True)[0]
+    d_ = {}
+    with open(os.path.join(file_path, file_),mode='r') as f:
+        for i, l in enumerate(f.readlines()):
+            if i > 0:
+                line = l.split(";")
+                if line[6].replace(" ", "")[:7]:
+                    d_[line[0]] = line[6].replace(" ", "")[:7]
+
+    pd.DataFrame([(d_[i], j) for i, j in zip(d_, d_)]).to_excel(os.path.join(pp.Path,'test.xlsx'))
+    df['Konkurrenznummer'] = df['ArtikelId'].map(d_)
+    return df
 
 
 def replace_column_after_join(df, colname_preis, colname_text, key, on):
@@ -173,7 +185,6 @@ def replace_column_after_join(df, colname_preis, colname_text, key, on):
         df['Joined_on_y'], df['Joined_{}_on'.format(key)])
     df = df[[i for i in df.columns if not re.match(
         '.*(_y|Level_5|Level_6|Closest).*', i)]]
-
     return df
 
 
@@ -211,7 +222,8 @@ def join_on_string_distance(df_l, df_r,
 
         arr = np.empty((X.shape[0], 2))
 
-        for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize), pp.batch(arr, chunksize))):
+        for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize),
+                                  pp.batch(arr, chunksize))):
             distance = pairwise_distances(i, Y, metric='cosine', n_jobs=n_jobs)
             distance_min = distance.min(axis=1)
             distance_argmin = distance.argmin(axis=1)
@@ -232,7 +244,7 @@ def join_on_string_distance(df_l, df_r,
         distance_df.drop(index_to_drop, inplace=True)
         deleted_x = begin_x - len(distance_df)
 
-        print('With a Threshold of {}, deleted {} Rows (% {})\n'.format(
+        print('With a Threshold of {}, deleted {} Rows (% {})'.format(
             threshold, deleted_x, round(deleted_x / begin_x * 100, 2)))
 
         distance_df = distance_df.merge(
@@ -244,8 +256,7 @@ def join_on_string_distance(df_l, df_r,
         df_l = replace_column_after_join(
             df_l, colname_preis, colname_text, key, on='Text Similarity')
     else:
-        print("Won't join {} on {} due to settings\n".format(key, on))
-
+        print("Won't join {} on {} due to settings".format(key, on))
     return df_l
 
 
@@ -262,6 +273,13 @@ def prepare_data(join_df_path, key, main_df,
                              settings['Companies'],
                              threshold=threshold)
 
+    if pp.check_settings(settings['Companies'], key, "Konkurrenznummer"):
+        main_df = join_dotdat(main_df)
+        join_df['Konkurrenznummer']  = join_df['ArtikelId']
+        main_df = join_on_id(main_df, join_df, key, "Konkurrenznummer",
+                             settings['Companies'],
+                             threshold=threshold)
+
     main_df = join_on_string_distance(
         main_df, join_df, key, settings['Companies'],
         threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
@@ -273,7 +291,6 @@ def prepare_data(join_df_path, key, main_df,
     to_clean = [i for i in main_df if re.match(preis_col_key, i)]
     [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
     main_df.loc[pd.isnull(main_df[preis_col_key]), to_clean] = np.nan
-
     return main_df
 
 
@@ -290,7 +307,6 @@ def join_meta_data(main_df, path, on, sales_query=None, meta_query=None):
         meta_query = pp.load_sql_text(os.path.join(path,"SQL", meta_query))
         meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
         main_df = main_df.merge(meta, how='left', on=on,  suffixes=('', '_y'))
-
     return main_df
 
 
@@ -298,7 +314,6 @@ def export_pandas(main_df, path,
                   name='Price-Comparison',
                   to_csv=True, to_excel=True,
                   index=False, timetag=None):
-
     main_df = main_df.drop_duplicates()
 
     if timetag:
@@ -312,18 +327,17 @@ def export_pandas(main_df, path,
             main_df.to_csv(filename, index=index, sep=';',
                            encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
     except PermissionError:
-        print('Permission was denied when writing to CSV\n')
+        print('Permission was denied when writing to CSV')
     try:
         if to_excel:
             filename = filename + '.xlsx'
-            print("Writing Excel File...\n")
+            print("Writing Excel File...")
             main_df.to_excel(filename,  index=index)
     except PermissionError:
-        print('Permission was denied when writing to Excel\n')
+        print('Permission was denied when writing to Excel')
 
 
 def main(settings, currentpath):
-
     files = [i for i in glob.iglob(os.path.join(
         currentpath) + '/Output/*.csv', recursive=True)]
 
@@ -365,9 +379,8 @@ def main(settings, currentpath):
     files_to_match = {os.path.split(
         i)[-1].split('-')[0]: j for i, j in zip(
         files_to_match, files_to_match)}
-
     for i in files_to_match:
-        print('\nMatching Data from {}\n{}\n'.format(i, '#'*80))
+        print('\n\n\nMatching Data from {}\n{}\n'.format(i, '#'*80))
         main_df = prepare_data(
                         files_to_match[i], i, main_df,
                         settings, threshold=price_threshold,
@@ -387,6 +400,7 @@ def main(settings, currentpath):
                   to_csv=csv_export, to_excel=excel_export, timetag=timetag)
 
 
+
 # -------------------------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -398,6 +412,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setting_to_apply = args.settings
+    #setting_to_apply = "Sanitary"
 
     settings = pp.load_json(os.path.join(currentpath, 'settings.json'))
 

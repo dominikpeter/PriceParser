@@ -1,7 +1,7 @@
 # Price Parser and Matching
 
 ## helper.py
-Helper Functions and constants
+Helper functions and constants
 
 ## getter.py
 Download XML's files from Website
@@ -11,3 +11,6 @@ Convert XML's to .csv or .xlsx
 
 ## matcher.py
 Match Article infos according to settings files
+
+## tracker.py
+Track price changes

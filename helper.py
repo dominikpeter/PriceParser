@@ -86,6 +86,7 @@ def check_settings(json, key, on):
     try:
         c = json[key][on]
     except KeyError:
+        c = False
         print('Key not found \n')
     return c
 

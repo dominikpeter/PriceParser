@@ -1,8 +1,8 @@
 {
   "Sanitary": {
     "Main File": "Richner",
-    "Max Text Distance": 0.3,
-    "Max Price Difference": 0.5,
+    "Max Text Distance": 0.4,
+    "Max Price Difference": 0.6,
     "Chunksize": 1500,
     "Parallel Jobs": 0,
     "Join on Supplier": true,
@@ -19,6 +19,24 @@
         "idHersteller": true,
         "Text Similarity": true,
         "Konkurrenznummer": true
+      },
+      "Sabag": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "Saneo": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
+      },
+      "TeamSaniDusch": {
+        "UniqueId": true,
+        "EAN": true,
+        "idHersteller": true,
+        "Text Similarity": true
       },
       "TeamHug": {
         "UniqueId": true,
