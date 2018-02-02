@@ -43,6 +43,16 @@ def add_columns(df, key):
     return df
 
 
+def create_article_and_color_id(id, color):
+    color_ = str(color)
+    id_ = str(id)
+    if color_ == '100' or color_ == '':
+        i = id_.join(color_)
+    else:
+        i = id_
+    return i
+
+
 def check_distance(x, threshold=0.5):
     if len(x) < 2:
         return x
@@ -168,9 +178,9 @@ def join_dotdat(df):
                 line = l.split(";")
                 if line[6].replace(" ", "")[:7]:
                     d_[line[0]] = line[6].replace(" ", "")[:7]
-
     pd.DataFrame([(d_[i], j) for i, j in zip(d_, d_)]).to_excel(os.path.join(pp.Path,'test.xlsx'))
-    df['Konkurrenznummer'] = df['ArtikelId'].map(d_)
+    df['Konkurrenznummer'] = df[['ArtikelId', 'FarbId']].apply(
+        lambda x: create_article_and_color_id(x[0], x[1]), axis=1).map(d_)
     return df
 
 
@@ -275,7 +285,8 @@ def prepare_data(join_df_path, key, main_df,
 
     if pp.check_settings(settings['Companies'], key, "Konkurrenznummer"):
         main_df = join_dotdat(main_df)
-        join_df['Konkurrenznummer']  = join_df['ArtikelId']
+        join_df['Konkurrenznummer']  = join_df[['ArtikelId', 'FarbId']].apply(
+            lambda x: create_article_and_color_id(x[0], x[1]), axis=1)
         main_df = join_on_id(main_df, join_df, key, "Konkurrenznummer",
                              settings['Companies'],
                              threshold=threshold)
