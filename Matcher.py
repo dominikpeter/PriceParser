@@ -26,6 +26,35 @@ def save_string_join(x):
     return joined
 
 
+def non_or_empty(x):
+    def bitwise_non_or_empty(x):
+        boo = False
+        if np.isnan(x):
+            boo = True
+        if x == None:
+            boo = True
+        if x == '':
+            boo = True
+        return boo
+    boo = x.apply(
+        lambda x: bitwise_non_or_empty(x))
+    return boo
+
+
+def join_and_update(left, right, left_on, right_on,
+                    left_update, right_update, key=""):
+    df_join = left.merge(right, how="left",
+                         left_on=left_on, right_on=right_on,
+                         suffixes=['','___y'])
+    check = (non_or_empty(
+        df_join[left_update])) & (~non_or_empty(
+        df_join[right_update+'___y']))
+    df_join.loc[check, 'Update_on'] = key
+    df_join.loc[check, left_update] = df_join[right_update + '___y']
+    df_join = df_join[[i for i in df_join.columns if not i.endswith('___y')]]
+    return df_join
+
+
 def add_columns(df, key):
     colname_preis = 'Preis_{}'.format(key)
     colname_text = 'Txt_Lang_{}'.format(key)
