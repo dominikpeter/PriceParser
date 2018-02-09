@@ -26,6 +26,54 @@ def save_string_join(x):
     return joined
 
 
+def non_or_empty(x):
+    def bitwise_non_or_empty(x):
+        boo = False
+        if np.isnan(x):
+            boo = True
+        if x == None:
+            boo = True
+        if x == '':
+            boo = True
+        return boo
+    boo = x.apply(
+        lambda x: bitwise_non_or_empty(x))
+    return boo
+
+
+def check_threshold(x, y, threshold):
+    x = x.copy()
+    y = y.copy()
+    x[abs(x - y) > threshold] = np.nan
+    return x
+
+
+def join_and_update(left, right, left_on, right_on,
+                    left_update, right_update, joined_on=""):
+
+    left = left.copy()
+    right = right.copy()
+
+    left[left_on] = left[left_on].replace('', np.nan)
+    right[right_on] = right[right_on].replace('', np.nan)
+
+    df_join = left.merge(right.dropna(), how="left",
+                         left_on=left_on, right_on=right_on,
+                         suffixes=['', '___y'])
+
+    check = (non_or_empty(
+        df_join[left_update])) & (~non_or_empty(
+            df_join[right_update + '___y']))
+
+    if 'Joined_on' not in df_join.columns:
+        df_join['Joined_on'] = np.nan
+
+    df_join.loc[check, 'Joined_on'] = joined_on
+    df_join.loc[check, left_update] = df_join[right_update + '___y']
+    df_join = df_join[[i for i in df_join.columns if not i.endswith('___y')]]
+    return df_join
+
+
 def add_columns(df, key):
     colname_preis = 'Preis_{}'.format(key)
     colname_text = 'Txt_Lang_{}'.format(key)
@@ -92,12 +140,7 @@ def modify_dataframe(df, join_supplier=True):
     df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
 
     if join_supplier:
-        #idHersteller_Columns = ['FarbId',
-        #                        'AusführungsId',
-        #                        'Art_Nr_Hersteller',
-        #                        'Art_Nr_Hersteller_Firma']
         idHersteller_Columns = ['FarbId','AusführungsId','Art_Nr_Hersteller']
-        #idHersteller_Columns = ['Art_Nr_Hersteller']
 
         df.loc[check_id, 'idHersteller'] = df.loc[check_id,
                                                   idHersteller_Columns
