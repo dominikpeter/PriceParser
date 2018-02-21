@@ -6,6 +6,74 @@
     "Chunksize": 1500,
     "Parallel Jobs": 0,
     "Join on Supplier": true,
+    "Output Columns": [
+      "ArtikelId",
+      "UID",
+      "Art_Txt_Lang",
+      "Preis",
+      "Category_Level_1",
+      "Category_Level_2",
+      "Category_Level_3",
+      "Category_Level_4",
+      "Preis_Konkurrenz_Sabag",
+      "Preis_Konkurrenz_Saneo",
+      "Preis_Konkurrenz_Sanitas",
+      "Preis_Konkurrenz_TeamHug",
+      "Preis_Konkurrenz_TeamKappeler",
+      "Preis_Konkurrenz_TeamMaga",
+      "Preis_Konkurrenz_TeamSaniDusch",
+      "Txt_Lang_Konkurrenz_Sabag",
+      "Txt_Lang_Konkurrenz_Saneo",
+      "Txt_Lang_Konkurrenz_Sanitas",
+      "Txt_Lang_Konkurrenz_TeamHug",
+      "Txt_Lang_Konkurrenz_TeamKappeler",
+      "Txt_Lang_Konkurrenz_TeamMaga",
+      "Txt_Lang_Konkurrenz_TeamSaniDusch",
+      "Joined_on_Sabag",
+      "Joined_on_Saneo",
+      "Joined_on_Sanitas",
+      "Joined_on_TeamHug",
+      "Joined_on_TeamKappeler",
+      "Joined_on_TeamMaga",
+      "Joined_on_TeamSaniDusch",
+      "UniqueId",
+      "Article_group",
+      "Discount_group",
+      "Suppliername",
+      "Creation_Date",
+      "Brand Name",
+      "Purchaseprice",
+      "GrossSales_LTM",
+      "Sales_LTM",
+      "Margin_LTM",
+      "Quantity_LTM",
+      "ObjectRate",
+      "CountOfOrders",
+      "CountOfCustomers",
+      "Discount_perc",
+      "Margin_perc",
+      "GrossSales_Calculated",
+      "GrossSales_Calculated_Sabag",
+      "GrossSales_Calculated_Saneo",
+      "GrossSales_Calculated_Sanitas",
+      "GrossSales_Calculated_TeamHug",
+      "GrossSales_Calculated_TeamKappeler",
+      "GrossSales_Calculated_TeamMaga",
+      "GrossSales_Calculated_TeamSaniDusch",
+      "ProCasa",
+      "Outlier_Sabag",
+      "Outlier_Saneo",
+      "Outlier_Sanitas",
+      "Outlier_TeamHug",
+      "Outlier_TeamKappeler",
+      "Outlier_TeamMaga",
+      "Outlier_TeamSaniDusch",
+      "Cluster_Margin_perc_&_Sales_LTM_Log",
+      "Cluster_Quantity_LTM_Log_&_Sales_LTM_Log",
+      "Cluster_ObjectRate_&_Sales_LTM_Log",
+      "Warengruppe",
+      "Warengruppe_Bezeichnung"
+    ],
     "Export": {
       "CSV": true,
       "Excel": false,
@@ -14,35 +82,63 @@
     },
     "Companies": {
       "Sanitas": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true,
-        "Konkurrenznummer": true
+        "Join Keys": [
+          [
+            ["Konkurrenznummer", "Farbe"],
+            ["ArtikelId", "Farbe"]
+          ],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
       },
       "Sabag": {
-        "UniqueId": true,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
       },
       "Saneo": {
-        "UniqueId": true,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
       },
       "TeamSaniDusch": {
-        "UniqueId": true,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
       },
       "TeamHug": {
-        "UniqueId": true,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
+      },
+      "TeamKappeler": {
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
+      },
+      "TeamMaga": {
+        "Join Keys": [
+          ["UID", "UID"],
+          ["EAN", "EAN"],
+          ["Art_Nr_Hersteller_UID", "Art_Nr_Hersteller_UID"],
+          ["Art_Nr_Hersteller", "Art_Nr_Hersteller"]
+        ]
       }
     },
     "SQL": {
@@ -50,129 +146,6 @@
       "Meta": "Meta.sql",
       "Sales": "Sales.sql",
       "Join": "UniqueId"
-    },
-    "Analysis": {
-      "Sales Percentile": 0.75,
-      "Quantity Percentile": 0.75,
-      "Object Percentile": 0.75
-    }
-  },
-  "Plumping": {
-    "Main File": "HT_Main_DF.sql",
-    "Max Text Distance": 0.5,
-    "Max Price Difference": 0.5,
-    "Chunksize": 1500,
-    "Parallel Jobs": 0,
-    "Join on Supplier": false,
-    "Export": {
-      "CSV": true,
-      "Excel": false,
-      "Timetag": true,
-      "Name": "Price-Comparison-Plumping"
-    },
-    "Companies": {
-      "SpaeterHT": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Tobler": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "DebrunnerAciferTB": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Engel": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Gabs": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Briner": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "ArthurWeber": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "DebrunnerWG": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "ISOCENTER": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "WalterMeier": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "SpaeterHT": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "SpaeterHZ": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "SpaeterWE": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Pestalozzi": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "Nussbaum": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      },
-      "SchwarzStahl": {
-        "UniqueId": false,
-        "EAN": true,
-        "idHersteller": true,
-        "Text Similarity": true
-      }
-    },
-    "SQL": {
-      "Server": "CRHBUSADWH02",
-      "Meta": "MetaHT.sql",
-      "Sales": "SalesHT.sql",
-      "Join": "ArtikelId"
     }
   }
 }

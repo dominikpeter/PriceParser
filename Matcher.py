@@ -1,21 +1,34 @@
+
+# coding: utf-8
+
 import argparse
 import codecs
 import csv
 import glob
-import json
 import math
+import json
 import os
 import re
 import datetime
+from functools import partial
 
 import numpy as np
 import pandas as pd
 import tqdm
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.feature_extraction.text import CountVectorizer
-import turbodbc
 
-import helper as pp
+import _main as pp
+
+
+def create_unique_id(head, tail):
+    r = ''
+    try:
+        if head:
+            r = str(head) + ''.join(tail)
+    except TypeError:
+        r = head
+    return r
 
 
 def save_string_join(x):
@@ -26,18 +39,27 @@ def save_string_join(x):
     return joined
 
 
-def non_or_empty(x):
-    def bitwise_non_or_empty(x):
-        boo = False
-        if np.isnan(x):
-            boo = True
-        if x == None:
-            boo = True
-        if x == '':
-            boo = True
-        return boo
-    boo = x.apply(
-        lambda x: bitwise_non_or_empty(x))
+def check_if_list_or_tuple(object):
+    return isinstance(object, (list, tuple))
+
+
+def check_if_string(object):
+    return isinstance(object, str)
+
+
+def non_or_empty(data, how="all"):
+    """ Detect missing values (Nan or Empty)
+    ----------
+    df : Serie or DataFrame
+    how : "all" or "any" """
+    switch = {"all": all, "any": any}
+    boo = [False for i in np.transpose(data)]
+    if isinstance(data, pd.DataFrame):
+        boo = pd.isnull(
+            data.replace("", np.nan)).apply(
+            switch[how.lower()], axis=1)
+    if isinstance(data, pd.Series):
+        boo = pd.isnull(data.replace("",np.nan))
     return boo
 
 
@@ -51,433 +73,371 @@ def check_threshold(x, y, threshold):
 def join_and_update(left, right, left_on, right_on,
                     left_update, right_update, joined_on=""):
 
+    assert(check_if_list_or_tuple(
+        left_update) == check_if_list_or_tuple(
+        right_update))
+
+    if right_on == 'Index':
+        right['Index'] = right.index
+
+    if left_on == 'Index':
+        left['Index'] = left.index
+
+    if check_if_string(left_update):
+        left_update = [left_update]
+
+    if check_if_string(right_update):
+        right_update = [right_update]
+
     left = left.copy()
-    right = right.copy()
+    righ = right.copy()
 
-    left[left_on] = left[left_on].replace('', np.nan)
-    right[right_on] = right[right_on].replace('', np.nan)
+    if 'Joined_on' not in left.columns:
+        left['Joined_on'] = np.nan
 
-    df_join = left.merge(right.dropna(), how="left",
-                         left_on=left_on, right_on=right_on,
-                         suffixes=['', '___y'])
+    if check_if_list_or_tuple(left_on):
+        for i in left_on:
+            left[i] = left[i].replace('', np.nan)
+    else:
+        left[left_on] = left[left_on].replace('', np.nan)
+
+    left_to_match = left[non_or_empty(left[left_update[0]])]
+    left_matched = left[~non_or_empty(left[left_update[0]])]
+
+    mb = left_to_match.shape[0]
+
+    if check_if_list_or_tuple(right_on):
+        cols = [i for i in right_on]
+    else:
+        cols = [right_on]
+
+    for i in right_update:
+        cols.append(i)
+
+    right = right[cols].copy()
+
+    if check_if_list_or_tuple(right_on):
+        for i in right_on:
+            right[i] = right[i].replace('', np.nan)
+    else:
+        right[right_on] = right[right_on].replace('', np.nan)
+
+    df_join = left_to_match.pipe(save_join, right=right, left_on=left_on,
+                                 right_on=right_on,
+                                 suffixes=['', '___y'])
+
+    right_update = [i + '___y' for i in right_update]
 
     check = (non_or_empty(
-        df_join[left_update])) & (~non_or_empty(
-            df_join[right_update + '___y']))
+        df_join[left_update[0]])) & (~non_or_empty(
+            df_join[right_update[0]]))
 
-    if 'Joined_on' not in df_join.columns:
-        df_join['Joined_on'] = np.nan
+    if check_if_list_or_tuple(joined_on):
+        joined_on = " ".join(joined_on)
 
     df_join.loc[check, 'Joined_on'] = joined_on
-    df_join.loc[check, left_update] = df_join[right_update + '___y']
+
+    for i, j in zip(left_update, right_update):
+        df_join.loc[check, i] = df_join[j]
+
     df_join = df_join[[i for i in df_join.columns if not i.endswith('___y')]]
+
+    ma = df_join[non_or_empty(df_join[left_update[0]])].shape[0]
+    d = mb - ma
+    mb += 1.0e-10
+    print('\nMatched {} articles from {} ({} %)\n'.format(d, int(round(mb, 0)),
+                                                      round(d / mb * 100, 2)))
+    left = pd.concat([left_matched, df_join], axis=0).reset_index(drop=True)
+    return left
+
+
+def save_join(left, right, left_on, right_on, *args, **kwargs):
+    if right_on == 'Index':
+        right['Index'] = right.index
+    if left_on == 'Index':
+        left['Index'] = left.index
+
+    noe = non_or_empty(right[right_on])
+
+    df_join = left.merge(right[~noe], how="left",
+                         left_on=left_on, right_on=right_on,
+                         *args, **kwargs)
     return df_join
 
 
-def add_columns(df, key):
-    colname_preis = 'Preis_{}'.format(key)
-    colname_text = 'Txt_Lang_{}'.format(key)
-    colname_join = 'Joined_{}_on'.format(key)
-    # distance_col = 'Distance_{}'.format(key)
-    # closest_col = 'Closest_{}'.format(key)
-    cols = [colname_preis,
-            colname_text,
-            colname_join]
-    def check_columns(x):
-        if x not in df.columns:
-            df[x] = np.nan
-    for i in cols:
-        check_columns(i)
-    return df
-
-
-def create_article_and_color_id(id, color):
-    color_ = str(color)
-    id_ = str(id)
-    if color_ == '100' or color_ == '':
-        i = id_.join(color_)
-    else:
-        i = id_
-    return i
-
-
-def check_distance(x, threshold=0.5):
-    if len(x) < 2:
-        return x
-    list_ = x[0]
-    i = 1
-    list_to_return = [list_]
-    while i < len(x):
-        r = x[i]
-        distance = abs(float(list_) - float(r))
-        l_to_check = float(list_) if float(list_) != 0 else np.nan
-        if (distance / l_to_check) > threshold:
-            r = np.nan
-        list_to_return.append(r)
-        i += 1
-    return list_to_return
-
-
-def modify_dataframe(df, join_supplier=True):
+def prep_dataframe(df):
     df = df.drop_duplicates()
-    df['Farbe'] = df['AF_Txt']
-    df['Ausführung'] = df['AFZ_Txt']
-    str_columns = ['ArtikelId',
-                   'FarbId',
-                   'AusführungsId',
-                   'Art_Nr_Hersteller']
+    for i in ['FarbId', 'AusführungsId']:
+        df.loc[non_or_empty(df[i]), i] = ''
 
-    df[str_columns] = df[str_columns].fillna('').astype(str)
-
-    object_columns = df.select_dtypes('object').columns
-    df.loc[:,object_columns] = df.loc[:,object_columns].fillna('')
-
+    df['Farbe'] = df['AF_Txt'].fillna('')
+    df['Ausführung'] = df['AFZ_Txt'].fillna('')
     df['FarbId'] = df['FarbId'].replace('', '000')
-    df['UniqueId'] = df[['ArtikelId', 'FarbId', 'AusführungsId']].apply(
-        lambda x: save_string_join(x), axis=1)
+    df['Preis'] = df['Preis_Pos'].astype(float)
+    df['Art_Nr_Hersteller'].astype(str, inplace=True)
+    df['Art_Nr_Hersteller'].fillna('', inplace=True)
 
-    check_id = df['Art_Nr_Hersteller'].astype(str).apply(lambda x: len(x) > 3)
-    df['Art_Nr_Hersteller'] = df['Art_Nr_Hersteller'].replace('', np.nan)
+    df['UID'] = df[['ArtikelId',
+                    'FarbId',
+                    'AusführungsId']].apply(
+        lambda x: create_unique_id(x[0], x[1:]), axis=1)
 
-    if join_supplier:
-        idHersteller_Columns = ['FarbId','AusführungsId','Art_Nr_Hersteller']
+    df['Art_Nr_Hersteller_UID'] = df[['Art_Nr_Hersteller',
+                                      'FarbId',
+                                      'AusführungsId']].apply(
+        lambda x: create_unique_id(x[0], x[1:]), axis=1)
 
-        df.loc[check_id, 'idHersteller'] = df.loc[check_id,
-                                                  idHersteller_Columns
-                                                  ].apply(
-                                                      lambda x:
-                                                      save_string_join(x),
-                                                      axis=1)
-    else:
-        idHersteller_Columns = ['Art_Nr_Hersteller']
-        df['idHersteller'] = df[idHersteller_Columns]
-        df.loc[~check_id, 'idHersteller'] = np.nan
-        check_double = df.groupby(
-                        'idHersteller')['idHersteller'].cumcount().values > 0
-        df.loc[check_double, 'idHersteller'] = np.nan
+    if 'Konkurrenzummer' in df.columns:
+        df['Konkurrenznummer'].astype(str, inplace=True)
+        # df['Konkurrenznummer'].fillna('', inplace=True)
+        # df['Konkurrenznummer'] = df[['Konkurrenznummer',
+        #                              'FarbId',
+        #                              'AusführungsId']].apply(
+        #     lambda x: create_unique_id(x[0], x[1:]), axis=1)
 
-    df['idHersteller'] = df['idHersteller'].replace('[^0-9a-zA-Z]+', '')
+    df['Art_Nr_Hersteller'].replace('', np.nan, inplace=True)
+    df['Art_Nr_Hersteller_UID'].replace('', np.nan, inplace=True)
 
-    df['idHersteller'] = df['idHersteller'].replace('\s', '')
+    df.loc[df['Art_Nr_Hersteller'].str.len() < 5, 'Art_Nr_Hersteller'] = np.nan
+    df.loc[df['Art_Nr_Hersteller_UID'].str.len(
+    ) < 5, 'Art_Nr_Hersteller_UID'] = np.nan
+
     df['EAN'] = df['Preis_EAN'].fillna(df['Art_Nr_EAN'])
-
-    df.iloc[:, 3:] = df.iloc[:, 3:].replace('', np.nan)
-    return clean_text(df)
-
-
-
-def clean_text(df, pattern='\t|\n|\r'):
-    for i in df.columns:
-        if df[i].dtype == 'object':
-            df[i] = df[i].str.replace(pattern, ' ')
     return df
 
 
-def join_on_id(df_l, df_r, key, on, settings, threshold=0.5):
-    df_r_ = df_r.copy()
-    if pp.check_settings(settings, key, on):
-        print('\nJoining Data on {}{}'.format(on, "\t"*8), end='\n')
+def join_dotdat(df, dotdat, right_on, left_on):
+    df = df.pipe(save_join, right=dotdat,
+                 right_on=right_on, left_on=left_on,
+                 suffixes=['', '___y'])
+
+    def clean_number(x):
         try:
-            lon, ron = on
-        except ValueError:
-            lon, ron = on, on
-        colname_preis = 'Preis_{}'.format(key)
-        colname_text = 'Txt_Lang_{}'.format(key)
-        df_l = add_columns(df_l, key)
-        df_r_[ron] = df_r_[ron].replace('', np.nan)
-        df_l[lon] = df_l[lon].replace('', np.nan)
-        df_r_[colname_preis] = df_r_['Preis']
-        df_r_[colname_text] = df_r_['Art_Txt_Lang']
-        check_ix = df_r_[pd.isnull(df_r_[ron])].index
-        df_r_.drop(check_ix, inplace=True)
-        df_j = df_l.merge(df_r_, how='left', suffixes=('', '_y'), on=on)
-        price = df_j['Preis'].astype(float)
-        price_y = df_j['{}_y'.format(colname_preis)].astype(float)
-        check_ix_one = df_j[(abs(price - price_y) / price) > threshold].index
-        check_ix_two = df_j[pd.notnull(df_j[colname_preis])].index
-        df_j.drop(check_ix_one.union(check_ix_two), inplace=True)
-        df_j = df_j[[i for i in df_j.columns if re.match('.+_y', i)]]
-        before_join = df_l[pd.isnull(df_l[colname_preis])].shape[0]
-        df_l = df_l.join(df_j, how='left', lsuffix='', rsuffix='_y')
-        df_l = replace_column_after_join(
-            df_l, colname_preis, colname_text, key, on)
-        after_join = df_l[pd.isnull(df_l[colname_preis])].shape[0]
-        diff_join = before_join - after_join
-        print("Joined {} from {} ({} %)".format(diff_join,
-                                    before_join,
-                                    round((diff_join / before_join)*100,2)))
-    else:
-        print("Won't join {} on {} due to settings".format(key, on))
-    return df_l
-
-
-def join_dotdat(df):
-    file_path = os.path.join(pp.Path, "Files", "Dotdat")
-    file_ = sorted(os.listdir(file_path), reverse=True)[0]
-    d_ = {}
-    with open(os.path.join(file_path, file_),mode='r') as f:
-        for i, l in enumerate(f.readlines()):
-            if i > 0:
-                line = l.split(";")
-                if line[6].replace(" ", "")[:7]:
-                    d_[line[0]] = line[6].replace(" ", "")[:7]
-    pd.DataFrame([(d_[i], j) for i, j in zip(d_, d_)]).to_excel(os.path.join(pp.Path,'test.xlsx'))
-    df['Konkurrenznummer'] = df[['ArtikelId', 'FarbId']].apply(
-        lambda x: create_article_and_color_id(x[0], x[1]), axis=1).map(d_)
+            c = re.sub("\s|\D", "", x)
+        except TypeError:
+            c = ''
+        return c[:6]
+    dotdat['Konkurrenznummer'] = dotdat['Konkurrenznummer'].apply(
+        lambda x: clean_number(x))
+    try:
+        df['Konkurrenznummer'] = df['Konkurrenznummer___y']
+    except KeyError:
+        pass
+    df = df[[i for i in df.columns if not i.endswith('___y')]]
     return df
 
 
-def replace_column_after_join(df, colname_preis, colname_text, key, on):
-    df['Joined_on_y'] = on
-    df[colname_preis] = np.where(
-        pd.isnull(df[colname_preis]), df['Preis_y'], df[colname_preis])
-    df[colname_text] = np.where(
-        pd.isnull(df[colname_text]), df['Art_Txt_Lang_y'], df[colname_text])
-    df['Joined_{}_on'.format(key)] = np.where(
-        (pd.isnull(df['Joined_{}_on'.format(key)])) & (pd.notnull(df['Preis_y'])),
-        df['Joined_on_y'], df['Joined_{}_on'.format(key)])
-    df = df[[i for i in df.columns if not re.match(
-        '.*(_y|Level_5|Level_6|Closest).*', i)]]
+def get_closest(left, right, chunksize=5000,
+                threshold=0.5, n_jobs=1, method='cosine',
+                columns=['Art_Txt_Lang', 'Art_Txt_Kurz',
+                         'Farbe', 'Ausführung']):
+
+    n_jobs = max(1, n_jobs)
+    vec = CountVectorizer()
+
+    ix = left.index
+
+    X = vec.fit_transform(left[columns].fillna('').astype(
+        str).apply(lambda x: ' '.join(x), axis=1))
+    Y = vec.transform(right[columns].fillna('').astype(
+        str).apply(lambda x: ' '.join(x), axis=1))
+
+    arr = np.empty((X.shape[0], 2))
+    print('Remaining Columns to match = {} ({} Batches)\n'.format(
+        X.shape[0], math.ceil(X.shape[0] / chunksize)))
+
+    for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize),
+                              pp.batch(arr, chunksize))):
+        distance = pairwise_distances(i, Y, metric='cosine', n_jobs=n_jobs)
+        distance_min = distance.min(axis=1)
+        distance_argmin = distance.argmin(axis=1)
+        a[:, 0] = distance_min
+        a[:, 1] = distance_argmin
+
+    distance_df = pd.DataFrame(
+        arr,
+        columns=['Distance', 'Closest'],
+        index=ix)
+
+    distance_df['Closest'].astype(np.int, inplace=True)
+    distance_df = distance_df[distance_df['Distance'] < threshold]
+    return distance_df
+
+
+def join_prices(left, right, join_keys):
+    for i in join_keys:
+        jol = ' and '.join(i[0]) if check_if_list_or_tuple(i[0]) else i[0]
+        jor = ' and '.join(i[1]) if check_if_list_or_tuple(i[1]) else i[1]
+
+        print('Joining on {} and {}'.format(jol, jor))
+        left = left.pipe(join_and_update, right,
+                         left_on=i[0], right_on=i[1],
+                         left_update=[
+                             'Preis_Konkurrenz', 'Txt_Kurz_Konkurrenz',
+                             'Txt_Lang_Konkurrenz'],
+                         right_update=[
+                             'Preis', 'Art_Txt_Kurz', 'Art_Txt_Lang'],
+                         joined_on=i[0])
+    return left
+
+
+def join_on_distance(left, right, distance):
+    left = left.join(distance, rsuffix='___y')
+    left = left.pipe(join_and_update, right,
+                     left_on="Closest",
+                     right_on='Index',
+                     left_update=['Preis_Konkurrenz',
+                                  'Txt_Kurz_Konkurrenz', 'Txt_Lang_Konkurrenz'],
+                     right_update=['Preis', 'Art_Txt_Kurz', 'Art_Txt_Lang'],
+                     joined_on='Text_Similarity')
+    return left
+
+
+def get_price_distance(df):
+    if "Preisdifferenz" not in df.columns:
+        df['Preisdifferenz'] = np.nan
+    df['Preisdifferenz'] = df['Preis'] - df['Preis_Konkurrenz']
     return df
 
 
-def join_on_string_distance(df_l, df_r,
-                            key, settings, chunksize=5000,
-                            threshold=0.5, n_jobs=1, method='cosine',
-                            columns=['Art_Txt_Lang', 'Art_Txt_Kurz',
-                                     'Farbe', 'Ausführung']):
-    df_r_ = df_r.copy()
-    on = 'Text Similarity'
-    if pp.check_settings(settings, key, on):
-        print('Joining Data on {}\n'.format(on))
-        df_l = add_columns(df_l, key)
-        n_jobs = max(1, n_jobs)
-        # vec = TfidfVectorizer(ngram_range=(1, 4))
-        vec = CountVectorizer()
-        # X_data = main_df[pd.isnull(main_df['Preis Sanitas'])]['Art_Txt_Lang']
-        colname_preis = 'Preis_{}'.format(key)
-        colname_text = 'Txt_Lang_{}'.format(key)
-        # colname_distance = 'Distance_{}'.format(key)
-
-        X = df_l.loc[pd.isnull(df_l[colname_preis]), :]
-        ix = X.index
-        print('Distance Joining {}\n'.format(key))
-        print('Remaining Columns to match = {} ({} Batches)\n'.format(
-            X.shape[0], math.ceil(X.shape[0] / chunksize)))
-
-        df_r_[colname_preis] = df_r_['Preis']
-        df_r_[colname_text] = df_r_['Art_Txt_Lang']
-
-        X = vec.fit_transform(X[columns].fillna('').astype(
-            str).apply(lambda x: ' '.join(x), axis=1))
-        Y = vec.transform(df_r_[columns].fillna('').astype(
-            str).apply(lambda x: ' '.join(x), axis=1))
-
-        arr = np.empty((X.shape[0], 2))
-
-        for i, a in tqdm.tqdm(zip(pp.batch(X, chunksize),
-                                  pp.batch(arr, chunksize))):
-            distance = pairwise_distances(i, Y, metric='cosine', n_jobs=n_jobs)
-            distance_min = distance.min(axis=1)
-            distance_argmin = distance.argmin(axis=1)
-            a[:, 0] = distance_min
-            a[:, 1] = distance_argmin
-
-        colname_distance = 'Distance_{}'.format(key)
-        colname_closest = 'Closest_{}'.format(key)
-
-        distance_df = pd.DataFrame(
-            arr,
-            columns=[colname_distance, colname_closest],
-            index=ix)
-
-        begin_x = len(distance_df)
-        index_to_drop = distance_df[distance_df['Distance_{}'.format(key)].astype(
-            float) > threshold].index
-        distance_df.drop(index_to_drop, inplace=True)
-        deleted_x = begin_x - len(distance_df)
-
-        print('With a Threshold of {}, deleted {} Rows (% {})'.format(
-            threshold, deleted_x, round(deleted_x / begin_x * 100, 2)))
-
-        distance_df = distance_df.merge(
-            df_r_, how='left', left_on='Closest_{}'.format(key),
-            right_index=True, suffixes=('', '_y'))
-
-        df_l = df_l.join(distance_df,how='left', lsuffix='', rsuffix='_y')
-
-        df_l = replace_column_after_join(
-            df_l, colname_preis, colname_text, key, on='Text Similarity')
-    else:
-        print("Won't join {} on {} due to settings".format(key, on))
-    return df_l
-
-
-def prepare_data(join_df_path, key, main_df,
-                 settings, threshold, distance,
-                 n_jobs=0, chunksize=2000,
-                 join_supplier=True):
-    join_df = pp.csv_to_pandas(join_df_path)
-    join_df = modify_dataframe(join_df, join_supplier=join_supplier)
-    main_df = modify_dataframe(main_df, join_supplier=join_supplier)
-
-    for i in ["UniqueId", "EAN", "idHersteller"]:
-        main_df = join_on_id(main_df, join_df, key, i,
-                             settings['Companies'],
-                             threshold=threshold)
-
-    if pp.check_settings(settings['Companies'], key, "Konkurrenznummer"):
-        main_df = join_dotdat(main_df)
-        join_df['Konkurrenznummer']  = join_df[['ArtikelId', 'FarbId']].apply(
-            lambda x: create_article_and_color_id(x[0], x[1]), axis=1)
-        main_df = join_on_id(main_df, join_df, key, "Konkurrenznummer",
-                             settings['Companies'],
-                             threshold=threshold)
-
-    main_df = join_on_string_distance(
-        main_df, join_df, key, settings['Companies'],
-        threshold=distance, n_jobs=n_jobs, chunksize=chunksize)
-
-    preis_col = [i for i in main_df.loc[:,'Preis':].columns if re.match('Preis.*', i)]
-    main_df[preis_col] = main_df[preis_col].apply(lambda x: check_distance(x, threshold), axis=1)
-
-    preis_col_key = 'Preis_{}'.format(key)
-    to_clean = [i for i in main_df if re.match(preis_col_key, i)]
-    [to_clean.append(i) for i in main_df if re.match("[^Preis`].*{}.*".format(key), i)]
-    main_df.loc[pd.isnull(main_df[preis_col_key]), to_clean] = np.nan
-    return main_df
-
-
-def join_meta_data(main_df, path, on, sales_query=None, meta_query=None):
-    con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
-    if sales_query:
-        print('Getting Sales Data from Database...')
-        sales_query = pp.load_sql_text(os.path.join(path,"SQL", sales_query))
-        sales = pp.sql_to_pandas(con, sales_query)
-        main_df = main_df.merge(sales, how='left', on=on,  suffixes=('', '_y'))
-
-    if meta_query:
-        print('Getting Meta Data from Database...')
-        meta_query = pp.load_sql_text(os.path.join(path,"SQL", meta_query))
-        meta = pp.sql_to_pandas(con, meta_query, parse_dates=['Erstellt_Am'])
-        main_df = main_df.merge(meta, how='left', on=on,  suffixes=('', '_y'))
-    return main_df
-
-
-def export_pandas(main_df, path,
-                  name='Price-Comparison',
-                  to_csv=True, to_excel=True,
-                  index=False, timetag=None):
-    main_df = main_df.drop_duplicates()
-
-    if timetag:
-        filename = os.path.join(path,"Matching", timetag+'_'+name)
-    else:
-        filename = os.path.join(path,"Matching", name)
-    try:
-        if to_csv:
-            filename = filename + '.csv'
-            print("Writing CSV File...")
-            main_df.to_csv(filename, index=index, sep=';',
-                           encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
-    except PermissionError:
-        print('Permission was denied when writing to CSV')
-    try:
-        if to_excel:
-            filename = filename + '.xlsx'
-            print("Writing Excel File...")
-            main_df.to_excel(filename,  index=index)
-    except PermissionError:
-        print('Permission was denied when writing to Excel')
-
-
-def main(settings, currentpath):
-    files = [i for i in glob.iglob(os.path.join(
-        currentpath) + '/Output/*.csv', recursive=True)]
-
-    # get settings parameters
-    main_file_pattern = settings['Main File']
-    text_distance = settings['Max Text Distance']
-    price_threshold = settings['Max Price Difference']
-    chunksize = settings['Chunksize']
-    parallel = settings['Parallel Jobs']
-    csv_export = settings['Export']['CSV']
-    excel_export = settings['Export']['Excel']
-    export_name = settings['Export']['Name']
-    timetag_bool = settings['Export']['Timetag']
-    join_sql_on = settings['SQL']['Join']
-    sales_query = settings['SQL']['Sales']
-    meta_query = settings['SQL']['Meta']
-    join_supplier = settings['Join on Supplier']
-
-    timetag = None
-
-    if timetag_bool:
-        now = datetime.datetime.now()
-        timetag = now.strftime('%Y-%m-%d')
-
-    if re.match('.+\.sql', main_file_pattern):
-        con = pp.create_connection_string_turbo('CRHBUSADWH02', 'AnalystCM')
-        query = pp.load_sql_text(os.path.join(currentpath,
-                                               "SQL", main_file_pattern))
-        main_df = pp.sql_to_pandas(con, query)
-    else:
-        main_file = [f for f in files if re.match(
-            r'.+{}(?!Badmoebel).+'.format(main_file_pattern), f)]
-        main_df = pp.csv_to_pandas(main_file[0])
-
-    companies_to_compare = [i for i in settings['Companies']]
+def get_files_dict(rootpath, companies):
+    files = os.listdir(rootpath)
+    if check_if_string(companies):
+        companies = [companies]
     compiler = re.compile(
-        r'.+(' + '|'.join(companies_to_compare).lower() + ')(?!Badmoebel).+')
+        r'.*(' + '|'.join(companies).lower() + ')(?!Badmoebel).+')
     files_to_match = [f for f in files if compiler.match(f.lower())]
+
     files_to_match = {os.path.split(
-        i)[-1].split('-')[0]: j for i, j in zip(
+        i)[-1].split('-')[0]: os.path.join(rootpath, j) for i, j in zip(
         files_to_match, files_to_match)}
-    for i in files_to_match:
-        print('\n\n\nMatching Data from {}\n{}\n'.format(i, '#'*80))
-        main_df = prepare_data(
-                        files_to_match[i], i, main_df,
-                        settings, threshold=price_threshold,
-                        distance=text_distance, n_jobs=parallel,
-                        chunksize=chunksize,
-                        join_supplier=join_supplier)
-    try:
-        main_df = join_meta_data(main_df,
-                                 path=currentpath,
-                                 on=join_sql_on,
-                                 sales_query=sales_query,
-                                 meta_query=meta_query)
-    except turbodbc.Error:
-        print('Cannot connect to Database')
-
-    export_pandas(main_df, path=currentpath, name=export_name,
-                  to_csv=csv_export, to_excel=excel_export, timetag=timetag)
+    return files_to_match
 
 
+def get_rank(df):
+    assert("Preisdifferenz" in df.columns)
+    df['Preisdifferenz_absolut'] = df['Preisdifferenz'].abs()
+    rnk = df.sort_values(
+        ['UID', 'Preisdifferenz_absolut']).groupby(
+        'UID')['Preisdifferenz_absolut'].rank(
+        method='first')
+    df['Rank'] = rnk
+    return df
 
-# -------------------------------------------------------------------------------------
-if __name__ == "__main__":
+
+def delete_with_threshold(df, to_delete, replace=np.nan, threshold=0.5):
+    assert("Preisdifferenz" in df.columns)
+    assert("Preis" in df.columns)
+    check = abs(df['Preisdifferenz'] / df['Preis']) > threshold
+    if check_if_list_or_tuple(to_delete):
+        for i in to_delte:
+            df.loc[check, i] = replace
+    else:
+        df.loc[check, to_delete] = replace
+    return df
+
+
+def delete_by_rank(df):
+    df = df[df['Rank'] == 1]
+    return df
+
+
+def loop_companies(df, dictionary, settings, concat_df=pd.DataFrame()):
+    for i in dictionary:
+        df_ = df.copy()
+        print('\n=================================\n',
+            'Preparing {}'.format(i),
+            '\n=================================\n'
+            )
+        compare_df = pp.csv_to_pandas(os.path.join("Output", dictionary[i]))
+        df_['Preis_Konkurrenz'] = np.nan
+        df_['Txt_Kurz_Konkurrenz'] = np.nan
+        df_['Txt_Lang_Konkurrenz'] = np.nan
+        df_['Konkurrenz'] = i
+        compare_df = compare_df.pipe(prep_dataframe)
+        df_ = df_.pipe(join_prices, right=compare_df,
+            join_keys=settings['Companies'][i]['Join Keys'])
+        distance = df_[pd.isna(
+            df_['Preis_Konkurrenz'])].pipe(get_closest,
+            compare_df, threshold=0.3)
+        df_ = (df_.pipe(join_on_distance, compare_df, distance)
+                  .pipe(get_price_distance)
+                  .pipe(delete_with_threshold, 'Preis_Konkurrenz')
+                  .pipe(get_rank)
+                  .pipe(delete_by_rank))
+        concat_df = pd.concat([concat_df, df_], axis=0)
+    return concat_df
+
+
+def get_dotdat_file(path, file_):
+    dd_files = os.listdir(path)
+    dd_files.sort(reverse=True)
+    dd_file = os.path.join(path, dd_files[0], file_ + '.csv')
+    dotdat = pd.read_csv(dd_file, sep="\t", encoding='utf-8', dtype=str)
+    return dotdat
+
+
+def main(settings):
+    rpath = pp.Path
+    print("Root path: {}".format(rpath))
+
+    print("Loading main file...")
+
+    gfd = partial(get_files_dict, os.path.join(rpath, "Output"))
+
+    main_file_path = gfd(['Richner'])
+    richner = pp.csv_to_pandas(os.path.join(rpath, "Output",
+        main_file_path['Richner']))
+
+    print("Preparing main file...")
+    richner['Preis_Konkurrenz'] = np.nan
+    richner['Konkurrenz'] = 'Sanitas'
+
+    #load dot dat file
+    dotdat = get_dotdat_file(
+        os.path.join(rpath, "Dotdat", "Output"), "KOMART0")
+
+    richner = richner.pipe(
+        join_dotdat, dotdat, left_on="ArtikelId", right_on="Artikelnummer")
+
+    richner = richner.pipe(prep_dataframe)
+
+    companies = gfd([i for i in settings['Companies']])
+
+    final = richner.pipe(loop_companies, companies, settings)
+
+    final = (final[['ArtikelId', 'FarbId', 'AusführungsId', 'UID',
+                   'Art_Txt_Kurz', 'Art_Txt_Lang', 'Ausführung', 'Farbe', 'EAN',
+                   'Konkurrenz', 'Konkurrenznummer', 'Warengruppe', 'Preis',
+                   'Preis_Konkurrenz', 'Txt_Kurz_Konkurrenz',
+                   'Txt_Lang_Konkurrenz', 'Joined_on',
+                   'Preisdifferenz', 'Art_Nr_Hersteller_Firma',
+                   'Category_Level_1', 'Category_Level_2', 'Category_Level_3',
+                   'Category_Level_4', 'Closest', 'Distance']]
+                   .fillna(''))
+
+    dt = datetime.datetime.now()
+    p = os.path.join(rpath, "Matched", dt.strftime("%Y-%m-%d") + "_Output.csv")
+    print("Writing File: {}".format(p))
+    final.to_csv(p, sep="\t", index=False)
+
+
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Example with long option names')
     parser.add_argument('--settings', default="Sanitary", dest="settings",
         help="Name of Setting", type=str)
 
-    currentpath  = pp.Path
-
     args = parser.parse_args()
     setting_to_apply = args.settings
-    #setting_to_apply = "Sanitary"
 
-    settings = pp.load_json(os.path.join(currentpath, 'settings.json'))
-
-    settings = settings[setting_to_apply]
-
-    for i in ['Matching', 'SQL', 'Files']:
-        pp.create_folder(currentpath, i)
+    currentpath = pp.Path
+    settings = pp.load_json(os.path.join(
+        currentpath, "settings.json"))[setting_to_apply]
 
     print(
-        "{}{}{}Article Matching for Price Comparison\n\n\u00a9 Dominik Peter{}{}{}".format(
-                "\n"*2, "#"*80, "\n"*2, "\n"*2, "#"*80, "\n"*2))
+        """{}{}{}Article Matching for Price Comparison
+        \n\u00a9 Dominik Peter{}{}{}\n""".format(
+            "\n" * 2, "#" * 80, "\n" * 2, "\n" * 2, "#" * 80, "\n" * 2))
 
-
-    main(settings, currentpath)
+    main(settings)

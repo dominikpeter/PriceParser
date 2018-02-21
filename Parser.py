@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""XML Parser
-
-Parse XML
-
-"""
 
 import argparse
 import sys
@@ -20,7 +15,7 @@ import numpy as np
 import pandas as pd
 from lxml import etree
 from tqdm import tqdm
-import helper as pp
+import _main as pp
 
 
 def switch_to_right(c):
@@ -56,7 +51,7 @@ def switch_to_left(c):
 
 
 def get_nodes(element, k=[]):
-    if element.attrib != {}:
+    if not element.attrib:
         try:
             k += [element.attrib['Txt']]
         except:
@@ -101,37 +96,23 @@ def findall_loop(element, tag, attrib=None):
 
 class XML_Parser:
     """XML Parser Class
-
     """
-
     def __init__(self, tree):
         self.tree = tree
         self.dict_ = pp.rec_dd()
         self.cat_dict = {}
-
         self.attr_dict = {
-            "Art_Nr_Anbieter": '',
-            "Art_Nr_Hersteller": '',
-            "Art_Nr_Hersteller_Firma": '',
-            "Art_Nr_EAN": '',
-            "Art_Nr_Nachfolge": '',
-            "Art_Nr_Synonym": '',
-            "Art_Nr_Synonym_Firma": '',
-            "Art_Valid_Von": '',
-            "Art_Valid_Bis": '',
-            "Art_Txt_Kurz": '',
-            "Art_Txt_Lang": '',
-            "Art_Menge": '',
-            "BM_Einheit_Code": '',
-            "BM_Einheit_Code_BM_Einheit": '',
-            "Preis_Pos": '',
-            "Preis_EAN": '',
-            "AF_Nr": '',
-            "AF_Txt": '',
-            "AFZ_Txt": '',
-            "AFZ_Nr": ''
+            "Art_Nr_Anbieter": '', "Art_Nr_Hersteller": '',
+            "Art_Nr_Hersteller_Firma": '', "Art_Nr_EAN": '',
+            "Art_Nr_Nachfolge": '', "Art_Nr_Synonym": '',
+            "Art_Nr_Synonym_Firma": '', "Art_Valid_Von": '',
+            "Art_Valid_Bis": '', "Art_Txt_Kurz": '',
+            "Art_Txt_Lang": '', "Art_Menge": '',
+            "BM_Einheit_Code": '', "BM_Einheit_Code_BM_Einheit": '',
+            "Preis_Pos": '', "Preis_EAN": '',
+            "AF_Nr": '', "AF_Txt": '',
+            "AFZ_Txt": '', "AFZ_Nr": ''
         }
-
         self.DF = pd.DataFrame()
         self.catDF = pd.DataFrame()
 
@@ -168,7 +149,6 @@ class XML_Parser:
         for artikel in self.tree.findall('.//Artikelmenge/Artikel'):
             self.clear_variables()
             try:
-
                 for i in ['Art_Nr_Hersteller_Firma', 'Art_Nr_Synonym']:
                     self.attr_dict[i] = findall_loop(
                         artikel, './/{}'.format(i), 'Firma')
@@ -180,16 +160,11 @@ class XML_Parser:
                     'Art_Nr_Anbieter']
                 # print(self.attr_dict["Art_Nr_Anbieter"])
 
-                attr_to_loop = ['Art_Nr_Hersteller',
-                                'Art_Nr_EAN',
-                                'Art_Nr_Nachfolge',
-                                'Art_Nr_Synonym',
-                                'Art_Nr_Synonym_Firma',
-                                'Art_Valid_Von',
-                                'Art_Valid_Bis',
-                                'Art_Txt_Lang',
-                                'Art_Txt_Kurz',
-                                'Art_Menge',
+                attr_to_loop = ['Art_Nr_Hersteller', 'Art_Nr_EAN',
+                                'Art_Nr_Nachfolge', 'Art_Nr_Synonym',
+                                'Art_Nr_Synonym_Firma', 'Art_Valid_Von',
+                                'Art_Valid_Bis', 'Art_Txt_Lang',
+                                'Art_Txt_Kurz', 'Art_Menge',
                                 'BM_Einheit_Code']
 
                 for i in attr_to_loop:
@@ -209,7 +184,6 @@ class XML_Parser:
 
                             self.insert_dict(
                                 self.attr_dict["Art_Nr_Anbieter"], '', '')
-
                     except KeyError:
                         print("Error")
                         pass
@@ -265,7 +239,8 @@ class XML_Parser:
 
     def get_category_to_dict(self):
         d = {}
-        for i in self.tree.xpath('/DataExpert/Body/Katalog/Suchbegriffe/Register_Suche/Register_Element_1'):
+        for i in self.tree.xpath(
+                '/DataExpert/Body/Katalog/Suchbegriffe/Register_Suche/Register_Element_1'):
             for n in range(10):
                 for j in i.findall('.//Element{}_Nr'.format(n)):
                     d[j.text] = j
@@ -276,7 +251,8 @@ class XML_Parser:
     def category_dict_to_df(self):
         self.catDF = pd.DataFrame.from_dict(self.cat_dict, orient='index')
         self.catDF.columns = ['Category_Level_{}'.format(
-            str(len(self.catDF.columns) - i)) for i in range(len(self.catDF.columns))]
+            str(len(self.catDF.columns) - i)) for i in range(
+                len(self.catDF.columns))]
         self.catDF = self.catDF[['Category_Level_{}'.format(
             str(i + 1)) for i in range(len(self.catDF.columns))]]
         self.catDF = self.catDF.apply(lambda l: switch_to_right(l), axis=1)
@@ -290,37 +266,24 @@ class XML_Parser:
                                               for j in self.dict_[i].keys()
                                               for k in self.dict_[i][j].keys()},
                                              orient='index')
-
             self.DF['ArtikelId'] = [i[0] for i in self.DF.index]
             self.DF['FarbId'] = [i[1] for i in self.DF.index]
             self.DF['AusführungsId'] = [i[2] for i in self.DF.index]
             self.DF['xml'] = str(filename)
             self.DF['Preis'] = self.DF['Preis_Pos']
-
             try:
-                self.DF = self.DF[['ArtikelId',
-                                   'FarbId',
-                                   'AusführungsId',
-                                   'Preis_Pos',
-                                   'Preis_EAN',
-                                   'Art_Nr_Hersteller',
-                                   'Art_Nr_Hersteller_Firma',
-                                   'Art_Nr_EAN',
-                                   'Art_Nr_Nachfolge',
-                                   'Art_Nr_Synonym',
-                                   'Art_Nr_Synonym_Firma',
-                                   'Art_Valid_Von',
-                                   'Art_Valid_Bis',
-                                   'Art_Txt_Kurz',
-                                   'Art_Txt_Lang',
-                                   'Art_Menge',
+                self.DF = self.DF[['ArtikelId', 'FarbId',
+                                   'AusführungsId', 'Preis_Pos',
+                                   'Preis_EAN', 'Art_Nr_Hersteller',
+                                   'Art_Nr_Hersteller_Firma', 'Art_Nr_EAN',
+                                   'Art_Nr_Nachfolge', 'Art_Nr_Synonym',
+                                   'Art_Nr_Synonym_Firma', 'Art_Valid_Von',
+                                   'Art_Valid_Bis', 'Art_Txt_Kurz',
+                                   'Art_Txt_Lang', 'Art_Menge',
                                    'BM_Einheit_Code',
-                                   'BM_Einheit_Code_BM_Einheit',
-                                   'AF_Nr',
-                                   'AF_Txt',
-                                   'AFZ_Txt',
-                                   'AFZ_Nr',
-                                   'Preis']]
+                                   'BM_Einheit_Code_BM_Einheit', 'AF_Nr',
+                                   'AF_Txt', 'AFZ_Txt',
+                                   'AFZ_Nr', 'Preis']]
 
                 self.DF['Preis_Pos'] = pd.to_numeric(
                     self.DF['Preis_Pos'], errors='coerce')
@@ -350,7 +313,6 @@ class XML_Parser:
 
     def df_to_file(self, filename, path, csv_, archiv_, excel_):
         if not self.DF.empty:
-
             xlsx_ext = '.xlsx'
             csv_ext = '.csv'
 
@@ -399,6 +361,7 @@ if __name__ == "__main__":
                         help="Generate Excel Files", type=str)
 
     currentpath = pp.Path
+    settings = pp.load_json(os.path.join(currentpath, "settings.json"))
 
     args = parser.parse_args()
 
@@ -407,6 +370,12 @@ if __name__ == "__main__":
         exit()
 
     __, XMLS = pp.get_xmls(currentpath)
+
+    companies = [i for i in settings["Sanitary"]['Companies']]
+    companies.append(settings["Sanitary"]["Main File"])
+
+    XMLS = [i for i in XMLS if re.match(
+        ".*("+ "|".join(companies) +")(?!Badmoebel)", i)]
 
     n_jobs = args.n_jobs
     archiv = pp.check_input_string_boolean(args.archiv)
@@ -429,7 +398,7 @@ if __name__ == "__main__":
     print("\n\n\n==============================================\n\n",
           "XML Parser",
           "\n",
-          "Parsing XML Files",
+          "u00a9 Dominik Peter\n"
           "\n\n""==============================================\n\n\n")
 
     for xml in XMLS:

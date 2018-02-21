@@ -1,4 +1,4 @@
-import helper as pp
+
 import glob
 import os
 import re
@@ -7,6 +7,8 @@ import numpy as np
 import csv
 import datetime
 import argparse
+
+import _main as pp
 
 
 def search_filetype_in_dict(path, filetype):

@@ -14,7 +14,6 @@ import pandas as pd
 import tqdm
 import turbodbc
 
-
 Path = os.path.join("\\\\CRHBUSADCS01",
                     "Data",
                     "PublicCitrix",
@@ -40,9 +39,19 @@ def load_json(path):
 
 
 def load_sql_text(path):
-    with codecs.open(path, encoding='utf-8') as sql:
+    with open(path, encoding='utf-8') as sql:
         file = sql.read()
     return file
+
+
+def get_sortet_path(path, pattern, **kwargs):
+    import re
+    l = []
+    for i in os.listdir(path):
+        if re.match(pattern, i):
+            l.append(i)
+    l.sort(**kwargs)
+    return l
 
 
 def create_connection_string_turbo(server, database):

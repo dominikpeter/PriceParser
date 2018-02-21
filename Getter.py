@@ -4,13 +4,13 @@ import multiprocessing
 import os
 import zipfile
 from functools import partial
-import PriceParser as pp
+import _main as pp
 
 import requests
 from lxml import html
 from tqdm import tqdm
 
-import helper as pp
+import _main as pp
 
 
 def get_download_url(html_content, baseUrl=""):
@@ -29,7 +29,7 @@ def get_download_url(html_content, baseUrl=""):
 
 
 def save_xml_from_url(path, url):
-    r = requests.get(url[1])
+    r = requests.get(url[1], verify=False)
     _path = os.path.join(path, str(url[0]).replace('/', '').replace(r'\\', ''))
     with zipfile.ZipFile(io.BytesIO(r.content)) as z:
         z.extractall(_path)
@@ -44,10 +44,13 @@ def extract_to_path(d, path, n_jobs_=0):
         for i in tqdm(d.items()):
             save_xml_from_url(path, i)
 
+
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Example with long option names')
-    parser.add_argument('--n_jobs',default=0, dest="n_jobs", help="Number of Parallel Jobs", type=int)
+    parser = argparse.ArgumentParser(
+        description='Example with long option names')
+    parser.add_argument('--n_jobs',default=0, dest="n_jobs",
+        help="Number of Parallel Jobs", type=int)
 
     print("\n\n\n==========================================================\n\n",
         "Getting XML Files from {}".format(pp.Page),
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     n_jobs = args.n_jobs
 
-    r = requests.get(pp.Page)
+    r = requests.get(pp.Page, verify=False)
     html_content = html.fromstring(r.content)
     g = get_download_url(html_content, html_content.base)
 

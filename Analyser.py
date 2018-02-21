@@ -1,180 +1,270 @@
-import argparse
-import codecs
-import csv
-import glob
-import json
-import math
+# coding: utf-8
 import os
 import re
 import datetime
 
-import numpy as np
-import pandas as pd
-import tqdm
+import _main as pp
+
 import turbodbc
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import Normalizer, StandardScaler, MinMaxScaler
+from sklearn.cluster import KMeans
 
-import helper as pp
+sns.set(style="whitegrid")
+
+def to_pivot(df):
+    pvt = pd.DataFrame()
+    cols = ['Preis_Konkurrenz',
+            'Txt_Kurz_Konkurrenz',
+            'Txt_Lang_Konkurrenz',
+            'Joined_on',
+            'Preisdifferenz',
+            'Closest', 'Distance']
+    for i in cols:
+        pvt_ = df.pivot(index='UID', columns='Konkurrenz', values=i)
+        pvt_.columns = [i + '_' + j for j in pvt_.columns]
+        pvt = pd.concat([pvt, pvt_], axis=1)
+    pvt = df.merge(
+        pvt, left_on='UID',
+        right_index=True)
+    pvt.drop(cols, axis=1, inplace=True)
+    pvt.drop('Konkurrenz', axis=1, inplace=True)
+    pvt.drop_duplicates(inplace=True)
+    return pvt.reset_index(drop=True)
 
 
-def load_file(filepath):
-    df = pp.csv_to_pandas(filepath)
+def load_price_group():
+    f = os.path.join(pp.Path, "Dotdat", "Output")
+    folders = os.listdir(f)
+    folders.sort(reverse=True)
+    folder = folders[0]
+    df = pd.read_csv(os.path.join(f, folder, "KOMWGR.csv"),
+        sep="\t", dtype=str)
+    df['Warengruppe_Bezeichnung'] = df["Text deutsch"]
+    df = df[df.groupby(
+        'Warengruppe')['Warengruppe_Bezeichnung'].rank(method='dense')==1]
+    return df.drop_duplicates()
 
+
+def join_price_group(df):
+    priceg = load_price_group()
+    df = df.merge(priceg[["Warengruppe", "Warengruppe_Bezeichnung"]],
+        how="left", on="Warengruppe")
+    return df.drop_duplicates()
+
+
+def get_companies(df):
+    companies = [i[17:] for i in df.columns if i.startswith(
+        "Preis_") and not i.endswith("Log")]
+    return companies
+
+
+def prep_df(df):
+    companies = get_companies(df)
+
+    for i in df:
+        try:
+            if df[i].dtype == 'O':
+                df[i] = df[i].str.replace("\r", "")
+                df[i] = df[i].str.replace("\n", " ")
+                df[i] = df[i].str.replace('"', "")
+                df[i] = df[i].str.strip()
+        except AttributeError:
+            continue
+
+    for j, i in enumerate(companies):
+        print("{} Company in data: {}".format(j+1, i))
+
+    df['Discount_perc'] = (df['GrossSales_LTM'] -
+                           df['Sales_LTM']) / df['GrossSales_LTM']
+    df['Margin_perc'] = df['Margin_LTM'] / df['Sales_LTM']
+    df['ProCasa'] = (df['Art_Txt_Lang']
+                      .str.lower()
+                      .str.replace(" ", "")
+                      .str.contains("procasa"))
+
+    for i in ['GrossSales_LTM', 'Sales_LTM',
+              'Margin_LTM', 'Quantity_LTM',
+              'ObjectRate', 'CountOfOrders', 'Preis',
+              'CountOfCustomers', 'Discount_perc', 'Margin_perc']:
+        df[i] = df[i].astype(np.float)
+        df[i + '_Log'] = df[i].apply(lambda x: np.log(x + 1))
+
+    df['GrossSales_Calculated'] = df['Preis'] * df['Quantity_LTM']
+
+    for i in companies:
+        df['Preis_Konkurrenz_' +
+            i] = df['Preis_Konkurrenz_' + i].astype(np.float)
+        df['Preis_Konkurrenz_' + i + '_Log'] = df['Preis_Konkurrenz_' +
+            i].apply(lambda x: np.log(x + 1))
+        df['Outlier_' + i] = np.nan
+        df['GrossSales_Calculated_' + i] = df['Preis_Konkurrenz_' + i] * \
+            df['Quantity_LTM']
+    return df.drop_duplicates()
+
+
+def cluster(df, X=None, tag='', clusters=5, scaler_obj=StandardScaler):
+    if tag in df.columns:
+        df[tag] = np.nan
+    if not X:
+        X = df
+    else:
+        X = df[X]
+    norm = scaler_obj()
+    normalized = norm.fit_transform(X)
+    kmeans = KMeans(
+        n_clusters=clusters, random_state=23).fit(normalized)
+    df[tag] = kmeans.labels_
+    return df.drop_duplicates()
+
+
+def outlier_detection(df, threshold=1.5):
+    companies = get_companies(df)
+    for i in companies:
+        df_temp = df[['Preis', 'Preis_Konkurrenz_' + i]
+            ].replace('', np.nan).dropna(how='any').copy()
+        df_temp['Preis'] = df_temp['Preis'].astype(np.float)
+        df_temp['Preis_Konkurrenz_' +
+            i] = df_temp['Preis_Konkurrenz_' + i].astype(np.float)
+        df_temp['Diff'] = df_temp['Preis'] - df_temp['Preis_Konkurrenz_' + i]
+        df['Outlier_' + i] = False
+        df_temp['Outlier_' + i] = (np.abs(
+                df_temp['Diff']) / df_temp['Preis']) > threshold * (
+                np.std(df_temp['Diff']) / df_temp['Preis'])
+        df.update(df_temp)
+    return df.drop_duplicates()
+
+def map_cluster(df):
+    cluster_cols = [i for i in df.columns if i.startswith("Cluster")]
+    for i in cluster_cols:
+        cols = re.sub("_Log|Cluster_", "", i).split("_&_")
+        #grouped = df[df[i]!='Nicht zugeordnet'].groupby(i)
+        grouped = df.groupby(i)[cols].mean()
+
+        mp = {1: "(1) Low", 2: "(2) Low", 3: "(2) High", 4: "(1) High"}
+
+        grouped[cols[0]+'_rank'] = grouped[cols[0]].rank().map(mp)
+        grouped[cols[1]+'_rank'] = grouped[cols[1]].rank().map(mp)
+
+        grouped['Cluster'] = grouped[[cols[0]+'_rank', cols[1]+'_rank']].apply(
+            lambda x: "{} {}, {} {}".format(
+                x[0], cols[0].split("_")[0],
+                x[1], cols[1].split("_")[0]), axis=1)
+
+        df[i] = df[i].map(grouped['Cluster']).fillna("Nicht zugeordnet")
     return df
 
+def get_cluster(df, plot=True):
+    for i in [['Margin_perc', 'Sales_LTM_Log', StandardScaler, 4],
+              ['Quantity_LTM_Log', 'Sales_LTM_Log', StandardScaler, 4],
+              ['ObjectRate', 'Sales_LTM_Log', StandardScaler, 4]]:
 
-def modify_dataframe(df):
-    ltm_cols = [i for i in df.columns if re.match('.+_LTM', i)]
-    df[ltm_cols] = df[ltm_cols].astype(float)
+        tag = 'Cluster_' + '_&_'.join(i[:2])
 
-    preis_cols = [i for i in df.columns if re.match('Preis_.*', i)]
-    preis_cols = [i for i in preis_cols if i not in ['Preis_EAN']]
-    df[preis_cols] = df[preis_cols].astype(float)
-    df['Preis'] = df['Preis'].astype(float)
-    df['ObjectRate'] = df['ObjectRate'].astype(float)
+        dfs = df.query(
+            "Margin_perc > 0.0001 and Sales_LTM > 100 and Margin_perc < 0.9").copy()
+        dfs = (dfs.pipe(cluster, X=[i[0], i[1]],
+                       tag=tag, clusters=i[3], scaler_obj=i[2])
+                   .pipe(map_cluster))
+        #print(grouped)
 
-    df['Erstellt_Am'] = pd.to_datetime(df['Erstellt_Am'])
-    df['Avg_Preis'] = df[preis_cols].mean(axis=1)
-    df['Std_Preis'] = df[preis_cols].std(axis=1)
-    df['Neuer_Preis'] = np.nan
-    df['Neuer_Faktor'] = np.nan
-    df['Neue_Gruppe'] = np.nan
+        #dfs[tag] = dfs[tag].map(i[4])
+        #dfs[tag] = dfs[tag] + 1
 
-    return df
+        if plot:
+            splt = sns.lmplot(i[0], i[1],
+                       data=dfs, hue=tag,
+                       fit_reg=False, size=7,
+                       aspect=1.6,
+                       palette=sns.color_palette('colorblind'))
+            splt._legend.set_title("Cluster")
 
+            plt.savefig(os.path.join(pp.Path, "Plots", "PDF", tag + ".pdf"))
+            plt.savefig(os.path.join(pp.Path, "Plots", "PNG", tag + ".png"))
 
-def select_df(df):
-    columns_ = ['ArtikelId', 'FarbId', 'AusführungsId',
-                'Art_Nr_Hersteller', 'Art_Nr_Hersteller_Firma',
-                'Art_Txt_Lang', 'Preis',
-                'Category_Level_1', 'Category_Level_2',
-                'Preis_Sabag', 'Txt_Lang_Sabag',
-                'Joined_Sabag_on', 'Distance_Sabag',
-                'Preis_Saneo', 'Txt_Lang_Saneo',
-                'Joined_Saneo_on', 'Distance_Saneo',
-                'Preis_Sanitas', 'Txt_Lang_Sanitas',
-                'Joined_Sanitas_on', 'Distance_Sanitas',
-                'Preis_TeamHug', 'Txt_Lang_TeamHug',
-                'Joined_TeamHug_on', 'Distance_TeamHug',
-                'Preis_TeamSaniDusch', 'Txt_Lang_TeamSaniDusch',
-                'Joined_TeamSaniDusch_on', 'Distance_TeamSaniDusch',
-                'Preis_ArthurWeber','Txt_Lang_ArthurWeber',
-                'Joined_ArthurWeber_on',
-                'Distance_ArthurWeber','Preis_Briner','Txt_Lang_Briner',
-                'Joined_Briner_on','Distance_Briner',
-                'Preis_DebrunnerAciferTB',
-                'Txt_Lang_DebrunnerAciferTB','Joined_DebrunnerAciferTB_on',
-                'Distance_DebrunnerAciferTB',
-                'Preis_Engel','Txt_Lang_Engel','Joined_Engel_on',
-                'Distance_Engel','Preis_Gabs','Txt_Lang_Gabs',
-                'Joined_Gabs_on','Distance_Gabs','Preis_ISOCENTER',
-                'Txt_Lang_ISOCENTER','Joined_ISOCENTER_on',
-                'Distance_ISOCENTER',
-                'Preis_Nussbaum','Txt_Lang_Nussbaum','Joined_Nussbaum_on',
-                'Distance_Nussbaum','Preis_Pestalozzi','Txt_Lang_Pestalozzi',
-                'Joined_Pestalozzi_on','Distance_Pestalozzi',
-                'Preis_SchwarzStahl',
-                'Txt_Lang_SchwarzStahl','Joined_SchwarzStahl_on',
-                'Distance_SchwarzStahl',
-                'Preis_SpaeterHT','Txt_Lang_SpaeterHT','Joined_SpaeterHT_on',
-                'Distance_SpaeterHT','Preis_SpaeterHZ','Txt_Lang_SpaeterHZ',
-                'Joined_SpaeterHZ_on','Distance_SpaeterHZ','Preis_SpaeterWE',
-                'Txt_Lang_SpaeterWE','Joined_SpaeterWE_on',
-                'Distance_SpaeterWE',
-                'Preis_Tobler','Txt_Lang_Tobler','Joined_Tobler_on',
-                'Distance_Tobler','Preis_WalterMeier','Txt_Lang_WalterMeier',
-                'Joined_WalterMeier_on','Distance_WalterMeier',
-                'GrossSales_LTM','Sales_LTM', 'Margin_LTM',
-                'Quantity_LTM', 'ObjectRate',
-                'Lieferantenname', 'Erstellt_Am',
-                'Artikelserie', 'Wgr-Nr.',
-                'Warengruppebezeichnung', 'Preisbasis',
-                'Preisfaktor', 'Avg_Preis', 'Std_Preis',
-                'Neuer_Preis', 'Neuer_Faktor', 'Neue_Gruppe']
-
-    columns_ = [i for i in columns_ if i in df.columns]
-
-    df = df[columns_]
-
-    timediff_ = datetime.datetime.now() - df['Erstellt_Am']
-
-    select_ = (timediff_.apply(
-        lambda x: x.days) < 180) | (
-        df['Quantity_LTM'] > 0.0)
-
-    pc_ = ~df['Art_Txt_Lang'].str.contains('ProCasa')
-
-    df = df.loc[select_ & pc_, :].copy().reset_index(drop=True)
-
-    return df
+        df[tag] = "Nicht zugeordnet"
+        df.update(dfs[tag])
+    return df.drop_duplicates()
 
 
-def checks(df):
-    mean_std_ = 1
-    sales_percentile_ = 75
-    quantity_percentile_ = 75
-    top_quantity_percentile_ = 95
-    top_sales_percentile_ = 95
-    object_percentile_ = 40
+def plot_outlier(df):
+    for i in get_companies(df):
+        dfplot = df[(df['Joined_on_' + i] != 'Text_Similarity') & (pd.notnull(
+            df['Preis_Konkurrenz_' + i]))]
+        f, ax = plt.subplots(figsize=(20, 20))
+        p1 = sns.regplot('Preis_Konkurrenz_' + i, 'Preis',
+                         data=dfplot, fit_reg=False)
+        for line in range(0, dfplot.shape[0]):
+            if dfplot.Outlier_Sanitas.iloc[line]:
+                p1.text(dfplot.Preis_Konkurrenz_Sanitas.iloc[line] + 0.5,
+                        dfplot.Preis.iloc[line], dfplot.Art_Txt_Kurz.iloc[line],
+                        horizontalalignment='left', size='medium', color='black')
+        plt.savefig(os.path.join(pp.Path, "Plots",
+                    "PDF", "Outlier_{}.pdf".format(i)))
+        plt.savefig(os.path.join(pp.Path, "Plots",
+                    "PGN", "Outlier_{}.pgn".format(i)))
 
-    c_avg = df['Preis'] < (df['Avg_Preis'] - (df['Std_Preis']) * mean_std_)
+def main():
+    query = pp.load_sql_text(os.path.join(pp.Path, "SQL", "Sales.sql")).strip()
 
-    df['Check Avg'] = c_avg
-    df['Check_Sales'] = df['Sales_LTM'] < np.nanpercentile(
-        df['Sales_LTM'],
-        sales_percentile_)
+    con = pp.create_connection_string_turbo("CRHBUSADWH02", 'AnalystCM')
+    meta = pp.sql_to_pandas(con, query)
 
-    df['Check_Quantity'] = df[
-        'Quantity_LTM'] < np.nanpercentile(
-        df['Quantity_LTM'],
-        quantity_percentile_)
+    files = [i for i in os.listdir(os.path.join(
+        pp.Path, "Matched")) if i.endswith(".csv")]
+    files.sort(reverse=True)
+    file_ = files[0]
 
-    high_c = df['Quantity_LTM'] > np.nanpercentile(
-        df['Quantity_LTM'],
-        top_quantity_percentile_)
+    print("Loading and preparing data...")
+    df= (pd.read_csv(os.path.join(
+                pp.Path, "Matched", file_), sep="\t", dtype=str)
+            .pipe(to_pivot)
+            .merge(meta, how='left', left_on='UID', right_on='UniqueId')
+            .pipe(prep_df)
+            .drop_duplicates(inplace=False)
+            .pipe(outlier_detection, threshold=2.5)
+            .pipe(get_cluster, plot=True)
+            .pipe(join_price_group)
+            .drop_duplicates(inplace=False))
 
-    low_s = df['Sales_LTM'] < np.nanpercentile(
-        df['Sales_LTM'],
-        top_sales_percentile_)
-
-    df['Check_High_Quantity_Low_Sales'] = high_c & low_s
-
-    o_ = df['ObjectRate'] < np.nanpercentile(
-        df['ObjectRate'], object_percentile_)
-
-    df['Check_ObjectRate'] = o_
-
-    return df
-
-
-def write_df(df, output):
     print("Writing file...")
-    df.to_csv(output, index=False, sep=';',
-              encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
 
+    dt = datetime.datetime.now()
 
-def main(input_, output_):
-    df = load_file(input_)
-    df = modify_dataframe(df)
-    df_s = select_df(df)
-    df_s = checks(df_s)
-    df_s = df_s.drop_duplicates()
+    settings = pp.load_json(os.path.join(pp.Path, "settings.json"))["Sanitary"]
+    cols = settings['Output Columns']
 
-    write_df(df_s, output_)
+    df = df[cols].drop_duplicates()
 
+    #create file with timetag
+    df.to_csv(
+        os.path.join(
+        pp.Path, "Analyse",dt.strftime("%Y-%m-%d") + "_Output_Analysis_full.csv"),
+        sep="\t", encoding="utf-8", index=False)
+    df[df['Sales_LTM']>0].to_csv(
+        os.path.join(
+        pp.Path, "Analyse",
+        dt.strftime("%Y-%m-%d") +  "_Output_Analysis_with_sales.csv"),
+        sep="\t", encoding="utf-8", index=False)
+
+    #create file without timetag, probably to copy it would be better
+    df.to_csv(
+        os.path.join(
+        pp.Path, "Analyse","Output_Analysis_full.csv"),
+        sep="\t", encoding="utf-8", index=False)
+    df[df['Sales_LTM']>0].to_csv(
+        os.path.join(
+        pp.Path, "Analyse", "Output_Analysis_with_sales.csv"),
+        sep="\t", encoding="utf-8", index=False)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Analyser')
-    parser.add_argument('-i', default="Price-Comparison.csv",
-                        dest="input",
-                        help="Input File", type=str)
-    parser.add_argument('-o',
-                        default="Price-Comparison-Analyser.csv", dest="output",
-                        help="Output File", type=str)
+    print(
+        """{}{}{}Price Analysis
+        \n\u00a9 Dominik Peter\n{}{}{}""".format(
+            "\n" * 2, "#" * 80, "\n" * 2, "\n" * 2, "#" * 80, "\n" * 2))
 
-    args = parser.parse_args()
 
-    input_ = args.input
-    output_ = args.output
-
-    main(input_, output_)
+    main()

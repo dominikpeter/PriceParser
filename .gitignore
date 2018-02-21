@@ -25,6 +25,20 @@ Plots/
 
 *.csv
 
+*.tsv
+
+*.png
+
 *.xlsx
 
+*.xlsb
+
 testing.py
+
+__pychache__/
+
+.ipynb_checkpoints/
+
+.idea/
+
+Analyse/
