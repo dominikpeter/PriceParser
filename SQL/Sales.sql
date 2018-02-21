@@ -64,7 +64,7 @@ and Sales > 0
 group by substring(i.iditemorigin, 2, 500), Supplier
 ) x
 GROUP BY UniqueId
-HAVING sum(Sales)>0
+HAVING sum(Sales) > 0
 
 
 SELECT UniqueId = SGVSB
